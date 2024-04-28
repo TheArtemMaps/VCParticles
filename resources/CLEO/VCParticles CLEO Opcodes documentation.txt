@@ -1,0 +1,383 @@
+### VCParticles CLEO Opcode Documentation
+
+Registering the opcodes in Sanny Builder:
+1. Open up opcodes.txt: sannybuilderdirectory\data\sa\opcodes.txt
+Paste the following at the end:
+
+1337: add_particle "FLYERS" x 1@ y 2@ z 3@ xdir 0.0 ydir 0.0 zdir 0.0 size 0.8 r 0 g 0 b 0 a 0 lifespan 0
+1338: add_particles_along_line "SNOW" x1 1@ y1 2@ z1 3@ x2 1.0 y2 2.0 z2 3.0 x3 4.0 y3 5.0 z3 6.0 power 1.0 size 0.0 r 0 g 0 b 0 a 0 lifespan 0
+1333: remove_particle_system "FLYERS"
+1335: add_jet_explosion x 3@ y 4@ z 5@ power 1.0 size 1.0
+1341: add_big_gun_flash xfrom 7@ yfrom 8@ zfrom 9@ xto 10@ yto 11@ zto 12@
+1342: add_moving_particle_effect "SMOKE_TRAIL" x 1@ y 2@ z 3@ xdir 0.0 ydir 0.0 zdir 0.5 scale 1.0 r 0 g 0 b 0 a 0 duration 32000 remove true
+1343: remove_particle_objects_in_area x1 1@ y1 2@ z1 3@ x2 4@ y2 5@ z1 6@
+1344: remove_all_expirable_particle_objects
+1345: remove_all_particle_objects
+1346: stir_ground_around_object 15@ radius 1.0 density 5
+1347: update_boat $CS_SHIP foam_animation
+1348: start_boat_foam_animation
+
+2. Open up SASCM.ini: sannybuilderdirectory\data\sa\SASCM.INI
+
+3. Paste the following at the end:
+# VCParticles Opcodes start
+1337=13, add_particle %1d% x %2d% y %3d% z %4d% xdir %5d% ydir %6d% zdir %7d% size %8d% r %9d% g %10d% b %11d% a %12d% lifespan %13d%
+1338=17, add_particles_along_line %1d% x1 %2d% y1 %3d% z1 %4d% x2 %5d% y2 %6d% z2 %7d% x3 %8d% y3 %9d% z3 %10d% power %11d% size %12d% r %13d% g %14d% b %15d% a %16d% lifespan %17d%
+1333=1, remove_particle_system %1d%
+1335=5, add_jet_explosion x %1d% y %2d% z %3d% power %4d% size %5d%
+1341=6, add_big_gun_flash xfrom %1d% yfrom %2d% zfrom %3d% xto %4d% yto %5d% zto %6d%
+1342=14, add_moving_particle_effect %1d% x %2d% y %3d% z %4d% xdir %5d% ydir %6d% zdir %7d% scale %8d% r %9d% g %10d% b %11d% a %12d% duration %13d% remove %14%
+1343=6, remove_particle_objects_in_area x1 %1d% y1 %2d% z1 %3d% x2 %4d% y2 %5d% z1 %6d%
+1344=0, remove_all_expirable_particle_objects
+1345=0, remove_all_particle_objects
+1346=3, stir_ground_around_object %1d% radius %2d% density %3d%
+1347=1, update_boat %1d% foam_animation
+1348=0, start_boat_foam_animation
+# VCParticles Opcodes end
+
+4. Done!
+
+**1337: add_particle**
+
+- **Description:** 
+  Adds a particle effect with the give type at a specified position with defined attributes.
+
+- **Syntax:** 
+  ```
+  1337: add_particle "FLYERS" x 1@ y 2@ z 3@ xdir 0.0 ydir .0 zdir 0.0 size 0.8 r 0 g 0 b 0 a 0 lifespan 0
+  ```
+
+- **Parameters:**
+  - `"FLYERS"`: Type of particle effect (Names are at the bottom).
+  - `x, y, z`: Position coordinates.
+  - `xdir, ydir, zdir`: Direction vector.
+  - `size`: Size of the particle.
+  - `r, g, b, a`: Color components (Red, Green, Blue, Alpha).
+  - `lifespan`: Lifespan of the particle.
+
+---
+
+**1338: add_particles_along_line**
+
+- **Description:** 
+  Adds a particle effect with the given type along a line segment with specified attributes.
+
+- **Syntax:** 
+  ```
+  1338: add_particles_along_line "SNOW" x1 1@ y1 2@ z1 3@ x2 1.0 y2 2.0 z2 3.0 x3 4.0 y3 5.0 z3 6.0 power 1.0 size 0.0 r 0 g 0 b 0 a 0 lifespan 0
+  ```
+
+- **Parameters:**
+  - `"SNOW"`: Type of particle effect (Names are at the bottom).
+  - `x1, y1, z1`: Starting point coordinates.
+  - `x2, y2, z2`: Ending point coordinates.
+  - `x3, y3, z3`: Direction vector.
+  - `power`: Power of the particle effect.
+  - `size`: Size of the particle.
+  - `r, g, b, a`: Color components (Red, Green, Blue, Alpha).
+  - `lifespan`: Lifespan of the particle.
+
+---
+
+**1333: remove_particle_system**
+
+- **Description:** 
+  Removes the particle system associated with the given name.
+
+- **Syntax:** 
+  ```
+  1333: remove_particle_system "FLYERS"
+  ```
+
+- **Parameters:**
+  - `"FLYERS"`: Name of particle system to remove (Names are at the bottom).
+
+---
+
+**1335: add_jet_explosion**
+
+- **Description:** 
+  Creates a jet (plane like) explosion particle effect at the specified position with given attributes.
+
+- **Syntax:** 
+  ```
+  1335: add_jet_explosion x 3@ y 4@ z 5@ power 1.0 size 1.0
+  ```
+
+- **Parameters:**
+  - `x, y, z`: Position coordinates.
+  - `power`: Power of the explosion.
+  - `size`: Size of the explosion.
+
+---
+
+**1341: add_big_gun_flash**
+
+- **Description:** 
+  Adds a big gun flash particle effect from one position to another.
+
+- **Syntax:** 
+  ```
+  1341: add_big_gun_flash xfrom 7@ yfrom 8@ zfrom 9@ xto 10@ yto 11@ zto 12@
+  ```
+
+- **Parameters:**
+  - `xfrom, yfrom, zfrom`: Starting position coordinates.
+  - `xto, yto, zto`: Ending position coordinates.
+
+---
+
+**1342: add_moving_particle_effect**
+
+- **Description:** 
+  This opcode adds a moving particle effects at the specified location for a duration of time.
+  Particle effects must be in range of the player (about 95 units) when adding them into the world;
+  they will not appear when added outside the range.
+  Particle effects that have been added will disappear when the player moves out of range regardless of duration.
+
+Using a particle effect outside the range listed below produces unpredictable results and may crash the game.
+ The colors red, green, and blue only affect particle 14 in GTA III and particle 16 in Vice City and has no effect on anything else (I removed this restriction).
+ Some particles do not obey the duration and are noted below.
+ If the duration is set to 0, particles that obey duration will loop forever;
+ using opcode 1343 or moving outside the range of the particle can remove a particle effect stuck in a loop. 
+ The strength represents the direction and length of movement of the particle.
+ Some particles look meaningless or weird absence of the strength.
+ Ones that are affected by gravity can be seen arcing towards the ground if an x- or y-strength is set.
+ Some particles do not obey the strength and are noted below.
+ Particle effects created with this opcode is saved in block 14 of the save file in GTA III and block 15 in Vice City.
+ The original script in GTA III uses particles 10, 11, 12, 13, 15, 18, and 19; and in Vice City uses 4 and 17.
+ 
+ More info: https://gtamods.com/wiki/039D
+
+- **Syntax:** 
+  ```
+	1342: add_moving_particle_effect "SMOKE_TRAIL"  x 1@ y 2@ z 3@ xdir 0.0 ydir 0.0 zdir 0.5 scale 1.0 r 0 g 0 b 0 duration 32000 remove true
+  ```
+
+- **Parameters:**
+[string]
+Particle effect (e.g., "SMOKE_TRAIL")
+[float]
+X-coordinate
+[float]
+Y-coordinate
+[float]
+Z-coordinate
+[float]
+X-direction strength
+[float]
+Y-direction strength
+[float]
+Z-direction strength
+[float]
+Scale
+[int]
+Red value (0 to 255)
+[int]
+Green value (0 to 255)
+[int]
+Blue value (0 to 255)
+[int]
+Duration in milliseconds
+[bool]
+Should the particle object be removed?
+
+---
+
+**1343: remove_particle_objects_in_area**
+
+- **Description:** 
+  Removes particle objects within the specified area.
+
+- **Syntax:** 
+  ```
+  1343: remove_particle_objects_in_area x1 1@ y1 2@ z1 3@ x2 4@ y2 5@ z1 6@
+  ```
+
+- **Parameters:**
+  - `x1, y1, z1`: Coordinates of one corner of the area.
+  - `x2, y2, z2`: Coordinates of the opposite corner of the area.
+
+---
+
+**1344: remove_all_expirable_particle_objects**
+
+- **Description:** 
+  Removes all particle objects that expires (Has the remove flag set to true).
+
+- **Syntax:** 
+  ```
+  1344: remove_all_expirable_particle_objects
+  ```
+
+---
+
+**1345: remove_all_particle_objects**
+
+- **Description:** 
+  Removes all particle objects.
+
+- **Syntax:** 
+  ```
+  1345: remove_all_particle_objects
+  ```
+
+---
+
+**1346: stir_ground_around_object**
+
+- **Description:** 
+  This opcode creates a helicopter dust particle effect around an object, behaving almost exactly as the one created by helicopters. 
+  The opcode must be placed within a loop, preferably with a wait of 0, in order to constantly create the particle effect. 
+  The radius parameter is the distance between the center of the object and the particles surrounding it at ground level. 
+  The density is capped at 8; any value higher than 8 is treated as 8. 
+  The player character must be within about 500 units of the object in order for the particle effect to be created. 
+  Pilotable helicopters in the game have a radius of 10.0 and density of about 9. 
+  The original script used this opcode on Lance's cutscene helicopter in the introduction scene.
+
+- **Syntax:** 
+  ```
+  1346: stir_ground_around_object [object handle] radius 1.0 density 5
+  ```
+
+- **Parameters:**
+  - `[object handle]`: Handle of the object.
+  - `radius`: Radius of the stirring effect.
+  - `density`: Density of the effect.
+  ---
+
+**1348: start_boat_foam_animation**
+
+- **Description:** 
+	Stores the current time when the foam animation starts
+
+- **Syntax:** 
+  ```
+  1348: start_boat_foam_animation
+  ```
+  
+  ---
+
+**1347: update_boat $CS_SHIP foam_animation**
+
+- **Description:** 
+	Updates the steaming effect around the specified object that was used during the final scene of the 'Bomb Da Base: Act II' mission from GTA III
+
+- **Syntax:** 
+  ```
+  1347: update_boat $CS_SHIP foam_animation
+  ```
+
+- **Parameters:**
+  - `$CS_SHIP`: Handle of the object.
+---  
+  
+  Particles names for using in 1338, 1337, and 1333.
+   "SPARK"
+    "SPARK_SMALL"
+    "WATER_SPARK"
+    "WHEEL_DIRT"
+    "SAND"
+    "WHEEL_WATER"
+    "BLOOD"
+    "BLOOD_SMALL"
+    "BLOOD_SPURT"
+    "DEBRIS"
+    "DEBRIS2"
+    "FLYERS"
+    "WATER"
+    "FLAME"
+    "FIREBALL"
+    "GUNFLASH"
+    "GUNFLASH_NOANIM"
+    "GUNSMOKE"
+    "GUNSMOKE2"
+    "CIGARETTE_SMOKE"
+    "SMOKE"
+    "SMOKE_SLOWMOTION"
+    "DRY_ICE"
+    "TEARGAS"
+    "GARAGEPAINT_SPRAY"
+    "SHARD"
+    "SPLASH"
+    "CARFLAME"
+    "STEAM"
+    "STEAM2"
+    "STEAM_NY"
+    "STEAM_NY_SLOWMOTION"
+    "GROUND_STEAM"
+    "ENGINE_STEAM"
+    "RAINDROP"
+    "RAINDROP_SMALL"
+    "RAIN_SPLASH"
+    "RAIN_SPLASH_BIGGROW"
+    "RAIN_SPLASHUP"
+    "WATERSPRAY"
+    "WATERDROP"
+    "BLOODDROP"
+    "EXPLOSION_MEDIUM"
+    "EXPLOSION_LARGE"
+    "EXPLOSION_MFAST"
+    "EXPLOSION_LFAST"
+    "CAR_SPLASH"
+    "BOAT_SPLASH"
+    "BOAT_THRUSTJET"
+    "WATER_HYDRANT"
+    "WATER_CANNON"
+    "EXTINGUISH_STEAM"
+    "PED_SPLASH"
+    "PEDFOOT_DUST"
+    "CAR_DUST"
+    "HELI_DUST"
+    "HELI_ATTACK"
+    "ENGINE_SMOKE"
+    "ENGINE_SMOKE2"
+    "CARFLAME_SMOKE"
+    "FIREBALL_SMOKE"
+    "PAINT_SMOKE"
+    "TREE_LEAVES"
+    "CARCOLLISION_DUST"
+    "CAR_DEBRIS"
+    "BIRD_DEBRIS"
+    "HELI_DEBRIS"
+    "EXHAUST_FUMES"
+    "RUBBER_SMOKE"
+    "BURNINGRUBBER_SMOKE"
+    "BULLETHIT_SMOKE"
+    "GUNSHELL_FIRST"
+    "GUNSHELL"
+    "GUNSHELL_BUMP1"
+    "GUNSHELL_BUMP2"
+    "ROCKET_SMOKE"
+    "TEST"
+    "BIRD_FRONT"
+    "SHIP_SIDE"
+    "BEASTIE"
+    "RAINDROP_2D"
+    "HEATHAZE"
+    "HEATHAZE_IN_DIST"
+    "SNOW"
+	
+Particle objects names for using in 1342:
+    "PAVEMENT_STEAM" - thick white steam
+    "PAVEMENT_STEAM_SLOWMOTION" - thick white steam (slowmotion)
+    "WALL_STEAM" - thick white smoke
+    "WALL_STEAM_SLOWMOTION" - thick white smoke (slowmotion)
+    "DARK_SMOKE" - black smoke
+    "FIRE_HYDRANT" -  fire hydrant water
+    "CAR_WATER_SPLASH" - large water splash
+    "PED_WATER_SPLASH" - medium water splash
+    "SPLASHES_AROUND" - a square of raindrops on the ground; if scale is 1.0, size of square is 1x1 units
+    "SMALL_FIRE"
+    "BIG_FIRE"1
+    "DRY_ICE"
+    "DRY_ICE_SLOWMOTION"
+    "WATER_FOUNTAIN_VERT" - vertical fountain water
+    "WATER_FOUNTAIN_HORIZ" - horizontal fountain water
+    "FIRE_TRAIL" 
+    "SMOKE_TRAIL" - the only particle effect that colors can be applied
+    "FIREBALL_AND_SMOKE" - initial explosion then smokes
+    "ROCKET_TRAIL" - initial explosion then smokes; setting duration to 0 can bug out all particles in the game, making random particles produce this smoke
+    "EXPLOSION_ONCE" - single brief explosion
+    "CATALINAS_GUNFLASH"
+    "CATALINAS_SHOTGUNFLASH"

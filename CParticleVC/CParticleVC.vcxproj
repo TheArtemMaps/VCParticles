@@ -125,6 +125,7 @@
     <ClInclude Include="ini_parser.hpp" />
     <ClInclude Include="IniReader.h" />
     <ClInclude Include="ParticleType.h" />
+	<ClInclude Include="Exported functions.h" />
     <ClInclude Include="debugmenu_public.h" />
     <ClInclude Include="Utility.h" />
   </ItemGroup>

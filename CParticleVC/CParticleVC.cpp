@@ -116,6 +116,8 @@ bool PoliceBoatGunParticles = true;
 bool FireOnHermes = true;
 bool TearGasSmoke = true;
 bool WoodImpactParticles = true;
+bool WaterDrops = true;
+bool BloodDrops = true;
 int SnowFlakes = 1;
 enum {
     NUM_RAIN_STREAKS = 35
@@ -904,6 +906,8 @@ void CParticle::ReloadConfig()
     FireOnHermes = ini.ReadBoolean("VISUAL", "Fire on Hermes", true);
     TearGasSmoke = ini.ReadBoolean("VISUAL", "Tear gas smoke particles", true);
     WoodImpactParticles = ini.ReadBoolean("VISUAL", "Wood impact particles", true);
+    WaterDrops = ini.ReadBoolean("VISUAL", "Water drops", true);
+    BloodDrops = ini.ReadBoolean("VISUAL", "Blood drops", true);
     SnowFlakes = ini.ReadInteger("VISUAL", "Max snow flakes", 1);
     nParticleCreationInterval = ini.ReadInteger("MISC", "Particles creation interval", 1);
     PARTICLE_WIND_TEST_SCALE = ini.ReadFloat("MISC", "PARTICLE_WIND_TEST_SCALE", 0.002f);
@@ -2991,8 +2995,9 @@ void CParticle::Render()
                             BlurType = FXTYPE_WATER2;
                         else
                             BlurType = FXTYPE_WATER1;
-
-                        CMBlur::AddRenderFx(Scene.m_pRwCamera, &rect, screenZ, fxtype);
+                        if (WaterDrops) {
+                            CMBlur::AddRenderFx(Scene.m_pRwCamera, &rect, screenZ, fxtype);
+                        }
 
                         canDraw = false;
                     }
@@ -3021,8 +3026,9 @@ void CParticle::Render()
                             BlurType = FXTYPE_BLOOD2;
                         else
                             BlurType = FXTYPE_BLOOD1;
-                        CMBlur::AddRenderFx(Scene.m_pRwCamera, &rect, screenZ, fxtype);
-
+                        if (BloodDrops) {
+                            CMBlur::AddRenderFx(Scene.m_pRwCamera, &rect, screenZ, fxtype);
+                        }
                         canDraw = false;
                     }
 
@@ -5762,7 +5768,7 @@ void CWeap::DoWeaponEffect(CVector origin, CVector dir) {
     case eWeaponType::WEAPON_SPRAYCAN:     fxName = PARTICLE_PAINT_SMOKE; color = { 0,255,0,255 };     break;
     default:                               CParticle::RemovePSystem(fxName);      return;
     }
-    dir /= 3.0f; // Make particles go slower
+    dir /= 4.0f; // Make particles go slower
     CParticle::AddParticle(fxName, origin, dir, nullptr, 0.0f, color);
 }
 
@@ -5938,17 +5944,19 @@ void Auto::ProcessHarvester()
         CWorld::Add(limb);
     }
     m_harvesterParticleCounter--;
-    if (m_harvesterParticleCounter % 3 == 0) {
+    if (m_harvesterParticleCounter % 3 == 0 && BloodnGore) {
         // Gory asf
         CParticle::AddParticle(PARTICLE_TEST, pos, velocity);
         CParticle::AddParticle(PARTICLE_BLOOD_SPURT, pos, velocity);
         CParticle::AddParticle(PARTICLE_BLOOD, pos, velocity);
         CParticle::AddParticle(PARTICLE_BLOOD_SMALL, pos, velocity);
-        CVector dropDir(CGeneral::GetRandomNumberInRange(-0.15f, 0.15f), CGeneral::GetRandomNumberInRange(0.1f, 0.35f), 0.f);
-        CVector dropPos(CGeneral::GetRandomNumberInRange(SCREEN_STRETCH_X(50.0f), SCREEN_STRETCH_FROM_RIGHT(50.0f)),
-            CGeneral::GetRandomNumberInRange(SCREEN_STRETCH_Y(50.0f), SCREEN_STRETCH_FROM_BOTTOM(50.0f)), 1.f);
-        CParticle::AddParticle(PARTICLE_BLOODDROP, dropPos, dropDir, NULL, CGeneral::GetRandomNumberInRange(0.1f, 0.15f),
-            RwRGBA(0, 0, 0, 0), 0, 0, GetRandomNumber() & 1, 0);
+        if (BloodDrops) {
+            CVector dropDir(CGeneral::GetRandomNumberInRange(-0.15f, 0.15f), CGeneral::GetRandomNumberInRange(0.1f, 0.35f), 0.f);
+            CVector dropPos(CGeneral::GetRandomNumberInRange(SCREEN_STRETCH_X(50.0f), SCREEN_STRETCH_FROM_RIGHT(50.0f)),
+                CGeneral::GetRandomNumberInRange(SCREEN_STRETCH_Y(50.0f), SCREEN_STRETCH_FROM_BOTTOM(50.0f)), 1.f);
+            CParticle::AddParticle(PARTICLE_BLOODDROP, dropPos, dropDir, NULL, CGeneral::GetRandomNumberInRange(0.1f, 0.15f),
+                RwRGBA(0, 0, 0, 0), 0, 0, GetRandomNumber() & 1, 0);
+        }
     }
 }
 void Obj::DoBurnEffect() const {
@@ -6389,7 +6397,7 @@ public:
             if (PunchImpactParticles) {
                 patch::RedirectCall(0x49F6E3, FxInfo);
             }
-            if (BloodnGore) {
+            if (BloodnGore && (BloodnGore && BulletImpactParticles)) {
                 patch::RedirectCall(0x49EB86, FxInfo);
             }
             if (WoodImpactParticles) {
@@ -6516,7 +6524,8 @@ public:
             // Memory::InjectHook(0x738B20, &ProjectileInfo::Update, PATCH_JUMP);
             //Memory::InjectHook(0x61EB10, &FireGun, PATCH_JUMP);
             //Memory::Patch(0x5DF3E6, 0);
-            if (HarvesterParticles) {
+            // Harvester particles, when you run people over
+            if (HarvesterParticles && (HarvesterParticles && BloodnGore)) {
                 Memory::InjectHook(0x6A9680, &Auto::ProcessHarvester, PATCH_JUMP);
             }
             // Object burn effect
@@ -7234,7 +7243,7 @@ public:
                 for (int i = 0; i < CPools::ms_pPedPool->m_nSize; i++) {
                     CPed* ped = CPools::ms_pPedPool->GetAt(i);
                     if (ped) {
-                        if ((CTimer::m_FrameCounter & 7) > 3) {
+                        if (!(CTimer::m_FrameCounter % 1)) {
                             CVector bloodDir(0.0f, 0.0f, 0.0f);
                             bloodDir = 0.1f * ped->GetUp();
                             for (int i = 0; i < 4; i++) {

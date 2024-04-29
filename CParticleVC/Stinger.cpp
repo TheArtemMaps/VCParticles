@@ -40,39 +40,41 @@ CStinger::CStinger()
 	bIsDeployed = false;
 }
 void
-CStinger::Init(CPed *pPed)
+CStinger::Init(CPed* pPed)
 {
 	int32_t i;
-
-	pOwner = pPed;
-	for (i = 0; i < NUM_STINGER_SEGMENTS; i++) {
-		pSpikes[i] = new CStingerSegment();
+	if (pPed && m_pStinger) {
+		pOwner = pPed;
+		for (i = 0; i < NUM_STINGER_SEGMENTS; i++) {
+			pSpikes[i] = new CStingerSegment();
+			//m_pStinger = new CStinger();
 #ifdef FIX_BUGS
-		if (!pSpikes[i] || !m_pStinger) {
-			// Abort!! Pool is full
-			Remove();
-			return;
-		}
+			if (!pSpikes[i]) {
+				// Abort!! Pool is full
+				Remove();
+				return;
+			}
 #endif
-		pSpikes[i]->m_bUsesCollision = false;
+			pSpikes[i]->m_bUsesCollision = false;
+		}
+		bIsDeployed = true;
+		m_vPos = pPed->GetPosition();
+		m_vPos.z -= 1.0f;
+		m_fMax_Z = atan2f(-pPed->GetForward().x, pPed->GetForward().y) + HALFPI;
+
+		for (i = 0; i < NUM_STINGER_SEGMENTS; i++) {
+			pSpikes[i]->SetOrientation(0.0f, 0.0f, atan2f(-pPed->GetForward().x, pPed->GetForward().y));
+			pSpikes[i]->SetPosn(m_vPos);
+		}
+
+		CVector2D fwd2d(pPed->GetForward().x, pPed->GetForward().y);
+
+		for (i = 0; i < ARRAY_SIZE(m_vPositions); i++)
+			m_vPositions[i] = fwd2d * 1.8f * sinf(DEGTORAD(i));
+
+		m_nSpikeState = STINGERSTATE_NONE;
+		m_nTimeOfDeploy = CTimer::m_snTimeInMilliseconds;
 	}
-	bIsDeployed = true;
-	m_vPos = pPed->GetPosition();
-	m_vPos.z -= 1.0f;
-	m_fMax_Z = atan2f(-pPed->GetForward().x, pPed->GetForward().y) + HALFPI;
-
-	for (i = 0; i < NUM_STINGER_SEGMENTS; i++) {
-		pSpikes[i]->SetOrientation(0.0f, 0.0f, atan2f(-pPed->GetForward().x, pPed->GetForward().y));
-		pSpikes[i]->SetPosn(m_vPos);
-	}
-
-	CVector2D fwd2d(pPed->GetForward().x, pPed->GetForward().y);
-
-	for (i = 0; i < ARRAY_SIZE(m_vPositions); i++)
-		m_vPositions[i] = fwd2d * 1.8f * sinf(DEGTORAD(i));
-
-	m_nSpikeState = STINGERSTATE_NONE;
-	m_nTimeOfDeploy = CTimer::m_snTimeInMilliseconds;
 }
 
 void
@@ -88,8 +90,8 @@ CStinger::Remove()
 			CWorld::Remove(spikeSegment);
 			delete spikeSegment;
 			pSpikes[i] = NULL;
-			m_pStinger->Remove();
-			delete m_pStinger;
+			//m_pStinger->Remove();
+			//delete m_pStinger;
 		}
 #else
 		if (spikeSegment->m_entryInfoList.first != nil)
@@ -105,7 +107,7 @@ void
 CStinger::Deploy(CPed *pPed)
 {
 	// So total number of stingers allowed at the same time is 2, each by different CCopPed.
-	if (NumOfStingerSegments < NUM_STINGER_SEGMENTS*2 && !pPed->m_nPedFlags.bInVehicle && pPed->IsPedInControl()) {
+	if (NumOfStingerSegments < NUM_STINGER_SEGMENTS*2 && !pPed->m_nPedFlags.bInVehicle && pPed->IsPedInControl() && pPed->m_pRwClump && m_pStinger) {
 		if (!bIsDeployed && RpAnimBlendClumpGetAssociation(pPed->m_pRwClump, ANIM_STDCARAMIMS_CAR_OPEN_LHS_0) == NULL) {
 			Init(pPed);
 #ifdef FIX_BUGS
@@ -113,7 +115,7 @@ CStinger::Deploy(CPed *pPed)
 			if (!bIsDeployed)
 				return;
 #endif
-			pPed->SetPedState(PEDSTATE_DEPLOY_STINGER);
+			//pPed->SetPedState(PEDSTATE_DEPLOY_STINGER);
 			CAnimManager::AddAnimation(pPed->m_pRwClump, pPed->m_nAnimGroup, ANIM_GRENADE_WEAPON_THROWU);
 		}
 	}
@@ -195,7 +197,7 @@ CStinger::Process()
 		if (pOwner != NULL
 			&& !pOwner->m_nPedFlags.bInVehicle
 			&& pOwner->m_ePedState == PEDSTATE_DEPLOY_STINGER
-			&& RpAnimBlendClumpGetAssociation(pOwner->m_pRwClump, ANIM_GRENADE_WEAPON_THROWU)->m_fCurrentTime > 0.39f)
+			&& RpAnimBlendClumpGetAssociation(pOwner->m_pRwClump, ANIM_GRENADE_WEAPON_THROWU)->m_fCurrentTime > 0.39f && m_pStinger)
 		{
 			m_nSpikeState = STINGERSTATE_DEPLOYING;
 			for (int i = 0; i < NUM_STINGER_SEGMENTS; i++)
@@ -262,36 +264,34 @@ CStinger::Process()
 }
 void CStinger::ProcessStingerCop(CPed* ped) {
 	//if (m_pStinger->bIsDeployed || FindPlayerVehicle(-1, false) && ped && m_pStinger && (FindPlayerVehicle(-1, false)->m_nVehicleSubClass == VEHICLE_AUTOMOBILE || FindPlayerVehicle(-1, false)->m_nVehicleSubClass == VEHICLE_BIKE)) {
-		//if (m_pStinger->bIsDeployed) {
+	//	if (m_pStinger->bIsDeployed) {
 		//	m_pStinger->Process();
 		//}
 		//else {
-	if (ped) {
-#ifdef IMPROVED_TECH_PART // wanted system
-		if (FindPlayerPed()->m_pWanted->IsPlayerHides())
-			return;
-#endif
-		CVector2D vehDist = ped->GetPosition() - FindPlayerVehicle(-1, false)->GetPosition();
-		CVector2D dirVehGoing = FindPlayerVehicle(-1, false)->m_vecMoveSpeed;
-		if (vehDist.MagnitudeSqr() < sq(30.0f)) {
-			if (dirVehGoing.MagnitudeSqr() > 0.0f) {
-				static_cast<Vec2D>(vehDist).Normalise();
-				static_cast<Vec2D>(dirVehGoing).Normalise();
-				if (DotProduct2D(vehDist, dirVehGoing) > 0.8f) {
-					float angle = (CrossProduct2D(vehDist, dirVehGoing - vehDist) < 0.0f ?
-						FindPlayerVehicle(-1, false)->GetForward().Heading() - HALFPI :
-						HALFPI + FindPlayerVehicle(-1, false)->GetForward().Heading());
+			if (ped && FindPlayerVehicle(-1, false) && m_pStinger) {
+				CVector2D vehDist = ped->GetPosition() - FindPlayerVehicle(-1, false)->GetPosition();
+				CVector2D dirVehGoing = FindPlayerVehicle(-1, false)->m_vecMoveSpeed;
+				if (vehDist.MagnitudeSqr() < sq(30.0f)) {
+					if (dirVehGoing.MagnitudeSqr() > 0.0f) {
+						static_cast<Vec2D>(vehDist).Normalise();
+						static_cast<Vec2D>(dirVehGoing).Normalise();
+						if (DotProduct2D(vehDist, dirVehGoing) > 0.8f) {
+							float angle = (CrossProduct2D(vehDist, dirVehGoing - vehDist) < 0.0f ?
+								FindPlayerVehicle(-1, false)->GetForward().Heading() - HALFPI :
+								HALFPI + FindPlayerVehicle(-1, false)->GetForward().Heading());
 
-					ped->SetHeading(angle);
-					ped->m_fCurrentRotation = angle;
-					ped->m_fAimingRotation = angle;
-					//	m_pStinger->Deploy(ped);
-					debug("Deployed the stinger");
-					log("Deployed the stinger");
+							ped->SetHeading(angle);
+							ped->m_fCurrentRotation = angle;
+							ped->m_fAimingRotation = angle;
+							m_pStinger->Deploy(ped);
+							debug("Deployed the stinger");
+							log("Deployed the stinger");
+						}
+					}
 				}
 			}
-		}
-	}
+		
+	//}
 	//}
 //}
 //else {
@@ -301,9 +301,9 @@ void CStinger::ProcessStingerCop(CPed* ped) {
 class Stinger {
 public:
 	Stinger() {
-		//Events::initGameEvent += []() {
-		//	m_pStinger = new CStinger();
-		//};
+		Events::initGameEvent += []() {
+			m_pStinger = new CStinger();
+		};
 		//Events::gameProcessEvent += []() {
 			//if (m_pStinger && m_pStinger->bIsDeployed && m_pStinger->m_nSpikeState == STINGERSTATE_DEPLOYED && CGame::currArea != 0)
 			//	m_pStinger->Process();
@@ -311,7 +311,7 @@ public:
 			//m_pStinger->Deploy(FindPlayerPed());
 		//};
 			Events::pedRenderEvent += [](CPed* ped) {
-				if (ped) {
+				if (ped && m_pStinger) {
 					CStinger::ProcessStingerCop(ped);
 				}
 			

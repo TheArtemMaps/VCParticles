@@ -29,6 +29,7 @@ using namespace plugin;
 #define CREATE_DUST_EFFECT_FOR_CUTSCENE_HELI 0x1346
 #define UPDATE_BOAT_FOAM_ANIMATION 0x1347
 #define START_BOAT_FOAM_ANIMATION 0x1348
+#define ADD_YARDIE_DOOR_SMOKE 0x1349
 // Adding particles with a string
 int ParticleTypeFromString(const char* typeStr) {
     if (strcmp(typeStr, "SPARK") == 0) return 0;
@@ -115,6 +116,7 @@ int ParticleTypeFromString(const char* typeStr) {
     if (strcmp(typeStr, "HEATHAZE") == 0) return 81;
     if (strcmp(typeStr, "HEATHAZE_IN_DIST") == 0) return 82;
     if (strcmp(typeStr, "SNOW") == 0) return 83;
+    if (strcmp(typeStr, "BOAT_WAKE") == 0) return 84;
     return -1; // Return -1 for unknown
 }
 
@@ -197,6 +199,11 @@ void __cdecl UpdateBoatFoamAnimationEx(int ObjectHandle) {
     return ((void(__cdecl*)(int))GetExportedFunction("UpdateBoatFoamAnimation"))(ObjectHandle);
 }
 
+void __cdecl AddYardieDoorSmoke(CVector& vecPos, int ObjectHandle) {
+    return ((void(__cdecl*)(CVector&, int))GetExportedFunction("AddYardieDoorSmoke"))(vecPos, ObjectHandle);
+}
+
+
 void AddParticleOpcode(CScriptThread* thread) {
     char buf[500];
     auto typeStr = CLEO_ReadStringOpcodeParam(thread, buf, sizeof(buf));
@@ -214,6 +221,15 @@ void AddParticleOpcode(CScriptThread* thread) {
     RwUInt8 a = CLEO_GetIntOpcodeParam(thread);
     int32_t LifeSpan = CLEO_GetIntOpcodeParam(thread);
     AddParticle(typeStr2, x, y, z, xdir, ydir, zdir, size, r, g, b, a, LifeSpan);
+}
+
+void AddYardieDoorSmokeOpcode(CScriptThread* thread) {
+    float x = CLEO_GetFloatOpcodeParam(thread);
+    float y = CLEO_GetFloatOpcodeParam(thread);
+    float z = CLEO_GetFloatOpcodeParam(thread);
+    CVector vecPos(x, y, z);
+    int ObjectHandle = CLEO_GetIntOpcodeParam(thread);
+    AddYardieDoorSmoke(vecPos, ObjectHandle);
 }
 
 void AddHeliDustOpcode(CScriptThread* thread) {
@@ -378,6 +394,11 @@ public:
         return OR_CONTINUE;
     }
 
+    static OpcodeResult WINAPI AddYardieDoorSmokeMain(CScriptThread* thread) {
+        AddYardieDoorSmokeOpcode(thread);
+        return OR_CONTINUE;
+    }
+
     CParticleVCCLEOOpcodes() {
         Events::initRwEvent += []() {
             if (!IsPluginInstalled("CParticleVC.SA.asi")) {
@@ -396,5 +417,6 @@ public:
         CLEO_RegisterOpcode(CREATE_DUST_EFFECT_FOR_CUTSCENE_HELI, AddHeliDustMain); // 1346=3, stir_ground_around_object %1d% radius %2d% density %3d%
         CLEO_RegisterOpcode(UPDATE_BOAT_FOAM_ANIMATION, UpdateBoatFoamAnimationMain); // 1347=1, update_boat %1d% foam_animation
         CLEO_RegisterOpcode(START_BOAT_FOAM_ANIMATION, StartBoatFoamAnimationMain); // 1348=0, start_boat_foam_animation
+        CLEO_RegisterOpcode(ADD_YARDIE_DOOR_SMOKE, AddYardieDoorSmokeMain); // 1349=4, add_yardie_door_smoke_at x %1d% y %2d% z %3d% attach_to_object %4d%
     }
 } cParticleVCCLEOOpcodes;

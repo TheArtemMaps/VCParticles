@@ -9,7 +9,7 @@ while true
     is_key_pressed 45
     then
   // 0107: 8@ = create_object #AD_FLATDOOR at 1@ 2@ 3@
-    1337: add_particle "FLYERS" x 1@ y 2@ z 3@ xdir 0.0 ydir 0.0 zdir 0.0 size 0.0 r 0 g 0 b 0 a 0 lifespan 0
+    1337: add_particle "FLYERS" x 1@ y 2@ z 3@ xdir 0.0 ydir 0.0 zdir 0.0 size 0.8 r 0 g 0 b 0 a 0 lifespan 0
     1342: add_moving_particle_effect "ROCKET_TRAIL" x 1@ y 2@ z 3@ xdir 0.0 ydir 0.0 zdir 0.5 scale 1.0 r 255 g 0 b 0 a 255 duration 9000 remove true
 //    1342: add_moving_particle_effect "SMOKE_TRAIL" x 1@ y 2@ z 3@
   // 1346: stir_ground_around_object 8@ radius 1.0 density 5
@@ -34,12 +34,17 @@ while true
     0407: create_coordinate 4@ 5@ 6@ from_car 7@ offset 0.0 -2.0 -2.0 
     1337: add_particle "FLYERS" x 4@ y 5@ z 6@ xdir 0.0 ydir 0.0 zdir 0.0 size 0.8 r 0 g 0 b 0 a 0 lifespan 0
     end
-    if 
+    if and
     is_key_pressed 123
+    04A7:   actor $PLAYER_ACTOR driving_boat
     then
-    Actor.StorePos($PLAYER_ACTOR, 9@, 10@, 11@)
-    0AE3: 8@ = random_object_near_point 9@ 10@ 11@ in_radius 10.0 find_next 1 //IF and SET
-    1348: start_boat_foam_animation
-    1347: update_boat 8@ foam_animation
+    1337: add_particle "BOAT_WAKE" x 1@ y 2@ z 3@ xdir 0.0 ydir 0.0 zdir 0.0 size 0.7 r 0 g 0 b 0 a 0 lifespan 0
     end
+   // Actor.StorePos($PLAYER_ACTOR, 9@, 10@, 11@)
+   // 0AE3: 8@ = random_object_near_point 9@ 10@ 11@ in_radius 10.0 find_next 1 //IF and SET
+    //   Object.StorePos(8@, 12@, 13@, 14@)
+    //1349: add_yardie_door_smoke_at x 12@ y 13@ z 14@ attach_to_object 8@
+    //1348: start_boat_foam_animation
+    //1347: update_boat 8@ foam_animation
+    //end
 end

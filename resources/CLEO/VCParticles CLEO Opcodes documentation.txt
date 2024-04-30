@@ -270,6 +270,20 @@ Should the particle object be removed?
 
 - **Parameters:**
   - `$CS_SHIP`: Handle of the object.
+  ---
+  **1349: add_yardie_door_smoke_at x 20@ y 21@ z 22@ attach_to_object 1@**
+
+- **Description:** 
+	Updates the steaming effect around the specified object that was used during the final scene of the 'Bomb Da Base: Act II' mission from GTA III
+
+- **Syntax:** 
+  ```
+  1349: add_yardie_door_smoke_at x 20@ y 21@ z 22@ attach_to_object 1@
+  ```
+
+- **Parameters:**
+  - `x, y, z (20@, 21@, 22@)`: Position of the smoke (More of like a offset).
+  - `attach_to_object 1@`: Object handle.
 ---  
   
   Particles names for using in 1338, 1337, and 1333.
@@ -357,6 +371,7 @@ Should the particle object be removed?
     "HEATHAZE"
     "HEATHAZE_IN_DIST"
     "SNOW"
+	"BOAT_WAKE"
 	
 Particle objects names for using in 1342:
     "PAVEMENT_STEAM" - thick white steam
@@ -379,5 +394,5 @@ Particle objects names for using in 1342:
     "FIREBALL_AND_SMOKE" - initial explosion then smokes
     "ROCKET_TRAIL" - initial explosion then smokes; setting duration to 0 can bug out all particles in the game, making random particles produce this smoke
     "EXPLOSION_ONCE" - single brief explosion
-    "CATALINAS_GUNFLASH"
-    "CATALINAS_SHOTGUNFLASH"
+    "CATALINAS_GUNFLASH" - GTA III leftover
+    "CATALINAS_SHOTGUNFLASH" - GTA III leftover

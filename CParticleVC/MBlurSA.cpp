@@ -558,7 +558,7 @@ CMBlur::ClearDrunkBlur()
 	CTimer::ms_fTimeScale = 1.0f;
 }
 
-#define NUM_RENDER_FX 1000 // 64
+#define NUM_RENDER_FX 64 // 64
 
 static RwRect fxRect[NUM_RENDER_FX];
 static FxType fxType[NUM_RENDER_FX];

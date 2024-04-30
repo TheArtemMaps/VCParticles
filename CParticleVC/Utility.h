@@ -179,12 +179,13 @@ Distance(const CVector& v1, const CVector& v2)
 {
     return (v2 - v1).Magnitude();
 }
+
 class Matrix : public CMatrix {
 public:
     CVector TransformPoint(CVector pt) const {
         return TransformVector(pt) + GetPosition();
     }
-
+    CMatrix Inverted() const;
     /*!
      * @notsa
      * @brief Transform a direction vector - will not take into account translation part of the Matrix.

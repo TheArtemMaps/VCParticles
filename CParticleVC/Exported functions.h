@@ -1,4 +1,5 @@
 #include "plugin.h"
+
 const uint32_t GetExportedFunction(const char* szExportName)
 {
     return reinterpret_cast<const uint32_t>(GetProcAddress(GetModuleHandleA("CParticleVC.SA.asi"), szExportName));
@@ -49,4 +50,8 @@ void __cdecl StartBoatFoamAnimationEx() {
 
 void __cdecl UpdateBoatFoamAnimationEx(int ObjectHandle) {
     return ((void(__cdecl*)(int))GetExportedFunction("UpdateBoatFoamAnimation"))(ObjectHandle);
+}
+
+void __cdecl AddYardieDoorSmoke(CVector& vecPos, int ObjectHandle) {
+    return ((void(__cdecl*)(CVector&, int))GetExportedFunction("AddYardieDoorSmoke"))(vecPos, ObjectHandle);
 }

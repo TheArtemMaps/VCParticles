@@ -117,6 +117,9 @@ int ParticleTypeFromString(const char* typeStr) {
     if (strcmp(typeStr, "HEATHAZE_IN_DIST") == 0) return 82;
     if (strcmp(typeStr, "SNOW") == 0) return 83;
     if (strcmp(typeStr, "BOAT_WAKE") == 0) return 84;
+    if (strcmp(typeStr, "FERRY_CHIM_SMOKE") == 0) return 85;
+    if (strcmp(typeStr, "MULTIPLAYER_HIT") == 0) return 86;
+    if (strcmp(typeStr, "HYDRANT_STEAM") == 0) return 87;
     return -1; // Return -1 for unknown
 }
 

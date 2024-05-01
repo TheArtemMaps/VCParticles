@@ -1204,14 +1204,13 @@ void CParticle::Initialise()
     assert(gpWakeOldTex != NULL); 
     gpWakeOldRaster = RwTextureGetRaster(gpWakeOldTex);
 
-   // gpMultiPlayerHitTex = RwTextureRead("mphit", nullptr);
-   // assert(gpMultiPlayerHitTex != NULL); 
-  //  gpMultiPlayerHitRaster = RwTextureGetRaster(gpMultiPlayerHitTex);
+    gpMultiPlayerHitTex = RwTextureRead("mphit", nullptr);
+    assert(gpMultiPlayerHitTex != NULL); 
+    gpMultiPlayerHitRaster = RwTextureGetRaster(gpMultiPlayerHitTex);
 
     // CExplosionVC - for the shock wave
     coronaringa = RwTextureRead("coronaringa", nullptr);
     assert(coronaringa != NULL);
-    CTxdStore::PopCurrentTxd();
 
     for (int32_t i = 0; i < MAX_PARTICLES; i++)
     {
@@ -1240,9 +1239,9 @@ void CParticle::Initialise()
         case PARTICLE_PEDFOOT_DUST:
         case PARTICLE_CAR_DUST:
         case PARTICLE_EXHAUST_FUMES:
-       // case PARTICLE_HYDRANT_STEAM:
-       //     entry->m_ppRaster = &gpSmoke2Raster;
-       //     break;
+        case PARTICLE_HYDRANT_STEAM:
+            entry->m_ppRaster = &gpSmoke2Raster;
+            break;
 
         case PARTICLE_WHEEL_WATER:
         case PARTICLE_WATER:
@@ -1377,13 +1376,13 @@ void CParticle::Initialise()
             entry->m_ppRaster = &gpWakeOldRaster;
             break;
 
-       /*case PARTICLE_FERRY_CHIM_SMOKE:
+       case PARTICLE_FERRY_CHIM_SMOKE:
             entry->m_ppRaster = gpSmokeRaster;
             break;
 
         case PARTICLE_MULTIPLAYER_HIT:
             entry->m_ppRaster = &gpMultiPlayerHitRaster;
-            break;*/
+            break;
 
         case PARTICLE_CAR_DEBRIS:
         case PARTICLE_HELI_DEBRIS:
@@ -1412,13 +1411,14 @@ void CParticle::Initialise()
             break;
         }
     }
+    CTxdStore::PopCurrentTxd();
     log("CParticle ready");
     debug("CParticle ready");
 }
 
 void CParticle::ReloadTXD() {
-    int32_t HudTXD = CTxdStore::FindTxdSlot("particleVC");
-    CTxdStore::RemoveTxdSlot(HudTXD);
+    int32_t ParticleVC = CTxdStore::FindTxdSlot("particleVC");
+    CTxdStore::RemoveTxdSlot(ParticleVC);
     log("Reloading particleVC.txd...\n");
     debug("Reloading particleVC.txd...\n");
     CTxdStore::PushCurrentTxd();
@@ -1427,164 +1427,214 @@ void CParticle::ReloadTXD() {
     CTxdStore::AddRef(slot2);
     int32_t slot = CTxdStore::FindTxdSlot("particleVC");
     CTxdStore::SetCurrentTxd(slot);
-
     for (int32_t i = 0; i < MAX_SMOKE_FILES; i++)
     {
         gpSmokeTex[i] = RwTextureRead(SmokeFiles[i], nullptr);
+        assert(gpSmokeTex[i] != NULL);
         gpSmokeRaster[i] = RwTextureGetRaster(gpSmokeTex[i]);
     }
 
     gpSmoke2Tex = RwTextureRead("smokeII_3", nullptr);
+    assert(gpSmoke2Tex != NULL);
     gpSmoke2Raster = RwTextureGetRaster(gpSmoke2Tex);
 
     for (int32_t i = 0; i < MAX_RUBBER_FILES; i++)
     {
         gpRubberTex[i] = RwTextureRead(RubberFiles[i], nullptr);
+        assert(gpRubberTex[i] != NULL);
         gpRubberRaster[i] = RwTextureGetRaster(gpRubberTex[i]);
     }
 
     for (int32_t i = 0; i < MAX_RAINSPLASH_FILES; i++)
     {
         gpRainSplashTex[i] = RwTextureRead(RainSplashFiles[i], nullptr);
+        assert(gpRainSplashTex[i] != NULL);
         gpRainSplashRaster[i] = RwTextureGetRaster(gpRainSplashTex[i]);
     }
 
     for (int32_t i = 0; i < MAX_WATERSPRAY_FILES; i++)
     {
         gpWatersprayTex[i] = RwTextureRead(WatersprayFiles[i], nullptr);
+        assert(gpWatersprayTex[i] != NULL);
         gpWatersprayRaster[i] = RwTextureGetRaster(gpWatersprayTex[i]);
     }
 
     for (int32_t i = 0; i < MAX_EXPLOSIONMEDIUM_FILES; i++)
     {
         gpExplosionMediumTex[i] = RwTextureRead(ExplosionMediumFiles[i], nullptr);
+        assert(gpExplosionMediumTex[i] != NULL);
         gpExplosionMediumRaster[i] = RwTextureGetRaster(gpExplosionMediumTex[i]);
     }
 
     for (int32_t i = 0; i < MAX_GUNFLASH_FILES; i++)
     {
         gpGunFlashTex[i] = RwTextureRead(GunFlashFiles[i], nullptr);
+        assert(gpGunFlashTex[i] != NULL);
         gpGunFlashRaster[i] = RwTextureGetRaster(gpGunFlashTex[i]);
     }
 
     gpRainDropTex = RwTextureRead("raindrop4", nullptr);
+    assert(gpRainDropTex != NULL);
     gpRainDropRaster = RwTextureGetRaster(gpRainDropTex);
 
+    // Snow
+    gpSnowTex = RwTextureRead("snowflake", nullptr);
+    assert(gpSnowTex != NULL);
+    gpSnowRaster = RwTextureGetRaster(gpSnowTex);
 
     for (int32_t i = 0; i < MAX_RAINSPLASHUP_FILES; i++)
     {
         gpRainSplashupTex[i] = RwTextureRead(RainSplashupFiles[i], nullptr);
+        assert(gpRainSplashupTex[i] != NULL);
         gpRainSplashupRaster[i] = RwTextureGetRaster(gpRainSplashupTex[i]);
     }
 
     for (int32_t i = 0; i < MAX_BIRDFRONT_FILES; i++)
     {
         gpBirdfrontTex[i] = RwTextureRead(BirdfrontFiles[i], nullptr);
+        assert(gpBirdfrontTex[i] != NULL);
         gpBirdfrontRaster[i] = RwTextureGetRaster(gpBirdfrontTex[i]);
     }
 
     for (int32_t i = 0; i < MAX_BOAT_FILES; i++)
     {
         gpBoatTex[i] = RwTextureRead(BoatFiles[i], nullptr);
+        assert(gpBoatTex[i] != NULL);
         gpBoatRaster[i] = RwTextureGetRaster(gpBoatTex[i]);
     }
 
     for (int32_t i = 0; i < MAX_CARDEBRIS_FILES; i++)
     {
         gpCarDebrisTex[i] = RwTextureRead(CardebrisFiles[i], nullptr);
+        assert(gpCarDebrisTex[i] != NULL);
         gpCarDebrisRaster[i] = RwTextureGetRaster(gpCarDebrisTex[i]);
     }
 
     for (int32_t i = 0; i < MAX_CARSPLASH_FILES; i++)
     {
         gpCarSplashTex[i] = RwTextureRead(CarsplashFiles[i], nullptr);
+        assert(gpCarSplashTex[i] != NULL);
         gpCarSplashRaster[i] = RwTextureGetRaster(gpCarSplashTex[i]);
     }
 
     gpBoatWakeTex = RwTextureRead("boatwake2", nullptr);
+    assert(gpBoatWakeTex != NULL);
     gpBoatWakeRaster = RwTextureGetRaster(gpBoatWakeTex);
 
     gpFlame1Tex = RwTextureRead("flame1", nullptr);
+    assert(gpFlame1Tex != NULL);
     gpFlame1Raster = RwTextureGetRaster(gpFlame1Tex);
 
     gpFlame5Tex = RwTextureRead("flame5", nullptr);
+    assert(gpFlame5Tex != NULL);
 
     //#ifdef FIX_BUGS
 #if 0
     gpFlame5Raster = RwTextureGetRaster(gpFlame5Tex);
 #else
-    // this seems to have become more of a design choice
-    gpFlame5Raster = RwTextureGetRaster(gpFlame1Tex);	// copy-paste bug ?
+// this seems to have become more of a design choice
+    gpFlame5Raster = RwTextureGetRaster(gpFlame1Tex); // copy-paste bug ?
 #endif
 
     gpRainDropSmallTex = RwTextureRead("rainsmall", nullptr);
+    assert(gpRainDropSmallTex != NULL);
     gpRainDropSmallRaster = RwTextureGetRaster(gpRainDropSmallTex);
 
     gpBloodTex = RwTextureRead("blood", nullptr);
+    assert(gpBloodTex != NULL);
     gpBloodRaster = RwTextureGetRaster(gpBloodTex);
 
     gpLeafTex[0] = RwTextureRead("gameleaf01_64", nullptr);
+    assert(gpLeafTex[0] != NULL);
     gpLeafRaster[0] = RwTextureGetRaster(gpLeafTex[0]);
 
     gpLeafTex[1] = RwTextureRead("letter", nullptr);
+    assert(gpLeafTex[1] != NULL);
     gpLeafRaster[1] = RwTextureGetRaster(gpLeafTex[1]);
 
     gpCloudTex1 = RwTextureRead("cloud3", nullptr);
+    assert(gpCloudTex1 != NULL);
     gpCloudRaster1 = RwTextureGetRaster(gpCloudTex1);
 
     gpCloudTex4 = RwTextureRead("cloudmasked", nullptr);
+    assert(gpCloudTex4 != NULL);
     gpCloudRaster4 = RwTextureGetRaster(gpCloudTex4);
 
     gpBloodSmallTex = RwTextureRead("bloodsplat2", nullptr);
+    assert(gpBloodSmallTex != NULL);
     gpBloodSmallRaster = RwTextureGetRaster(gpBloodSmallTex);
 
     gpGungeTex = RwTextureRead("gunge", nullptr);
+    assert(gpGungeTex != NULL);
     gpGungeRaster = RwTextureGetRaster(gpGungeTex);
 
     gpCollisionSmokeTex = RwTextureRead("collisionsmoke", nullptr);
+    assert(gpCollisionSmokeTex != NULL);
     gpCollisionSmokeRaster = RwTextureGetRaster(gpCollisionSmokeTex);
 
     gpBulletHitTex = RwTextureRead("bullethitsmoke", nullptr);
+    assert(gpBulletHitTex != NULL);
     gpBulletHitRaster = RwTextureGetRaster(gpBulletHitTex);
 
     gpGunShellTex = RwTextureRead("gunshell", nullptr);
+    assert(gpGunShellTex != NULL);
     gpGunShellRaster = RwTextureGetRaster(gpGunShellTex);
 
     gpPointlightTex = RwTextureRead("pointlight", nullptr);
+    assert(gpPointlightTex != NULL);
     gpPointlightRaster = RwTextureGetRaster(gpPointlightTex);
 
     gpSparkTex = RwTextureRead("spark", nullptr);
+    assert(gpSparkTex != NULL);
     gpSparkRaster = RwTextureGetRaster(gpSparkTex);
 
     gpNewspaperTex = RwTextureRead("newspaper02_64", nullptr);
+    assert(gpNewspaperTex != NULL);
     gpNewspaperRaster = RwTextureGetRaster(gpNewspaperTex);
 
     gpGunSmokeTex = RwTextureRead("gunsmoke3", nullptr);
+    assert(gpGunSmokeTex != NULL);
     gpGunSmokeRaster = RwTextureGetRaster(gpGunSmokeTex);
 
     gpDotTex = RwTextureRead("dot", nullptr);
+    assert(gpDotTex != NULL);
     gpDotRaster = RwTextureGetRaster(gpDotTex);
 
     gpHeatHazeTex = RwTextureRead("heathaze", nullptr);
+    assert(gpHeatHazeTex != NULL);
     gpHeatHazeRaster = RwTextureGetRaster(gpHeatHazeTex);
 
     gpBeastieTex = RwTextureRead("beastie", nullptr);
+    assert(gpBeastieTex != NULL);
     gpBeastieRaster = RwTextureGetRaster(gpBeastieTex);
 
     gpRainDripTex[0] = RwTextureRead("raindrip64", nullptr);
+    assert(gpRainDripTex[0] != NULL);
     gpRainDripRaster[0] = RwTextureGetRaster(gpRainDripTex[0]);
 
     gpRainDripTex[1] = RwTextureRead("raindripb64", nullptr);
+    assert(gpRainDripTex[1] != NULL);
     gpRainDripRaster[1] = RwTextureGetRaster(gpRainDripTex[1]);
 
     gpRainDripDarkTex[0] = RwTextureRead("raindrip64_d", nullptr);
+    assert(gpRainDripDarkTex[0] != NULL);
     gpRainDripDarkRaster[0] = RwTextureGetRaster(gpRainDripDarkTex[0]);
 
     gpRainDripDarkTex[1] = RwTextureRead("raindripb64_d", nullptr);
+    assert(gpRainDripDarkTex[1] != NULL);
     gpRainDripDarkRaster[1] = RwTextureGetRaster(gpRainDripDarkTex[1]);
+
+    gpWakeOldTex = RwTextureRead("wake_old", nullptr);
+    assert(gpWakeOldTex != NULL);
+    gpWakeOldRaster = RwTextureGetRaster(gpWakeOldTex);
+
+    gpMultiPlayerHitTex = RwTextureRead("mphit", nullptr);
+    assert(gpMultiPlayerHitTex != NULL);
+    gpMultiPlayerHitRaster = RwTextureGetRaster(gpMultiPlayerHitTex);
+
     // CExplosionVC - for the shock wave
-    coronaringa = RwTextureRead("coronaringa", NULL);
-    CTxdStore::PopCurrentTxd();
+    coronaringa = RwTextureRead("coronaringa", nullptr);
+    assert(coronaringa != NULL);
 
     for (int32_t i = 0; i < MAX_PARTICLES; i++)
     {
@@ -1613,6 +1663,7 @@ void CParticle::ReloadTXD() {
         case PARTICLE_PEDFOOT_DUST:
         case PARTICLE_CAR_DUST:
         case PARTICLE_EXHAUST_FUMES:
+        case PARTICLE_HYDRANT_STEAM:
             entry->m_ppRaster = &gpSmoke2Raster;
             break;
 
@@ -1740,8 +1791,21 @@ void CParticle::ReloadTXD() {
         case PARTICLE_BURNINGRUBBER_SMOKE:
             entry->m_ppRaster = &gpCollisionSmokeRaster;
             break;
+
         case PARTICLE_SNOW:
             entry->m_ppRaster = &gpSnowRaster;
+            break;
+
+        case PARTICLE_BOAT_WAKE:
+            entry->m_ppRaster = &gpWakeOldRaster;
+            break;
+
+        case PARTICLE_FERRY_CHIM_SMOKE:
+            entry->m_ppRaster = gpSmokeRaster;
+            break;
+
+        case PARTICLE_MULTIPLAYER_HIT:
+            entry->m_ppRaster = &gpMultiPlayerHitRaster;
             break;
 
         case PARTICLE_CAR_DEBRIS:
@@ -1771,6 +1835,7 @@ void CParticle::ReloadTXD() {
             break;
         }
     }
+    CTxdStore::PopCurrentTxd();
     log("Reloaded particleVC.txd!\n");
     debug("Reloaded particleVC.txd!\n");
 }
@@ -1922,6 +1987,15 @@ void CParticle::Shutdown()
 
     RwTextureDestroy(gpBeastieTex);
     gpBeastieTex = nullptr;
+
+    RwTextureDestroy(gpSnowTex);
+    gpSnowTex = nullptr;
+
+    RwTextureDestroy(gpMultiPlayerHitTex);
+    gpMultiPlayerHitTex = nullptr;
+
+    RwTextureDestroy(gpWakeOldTex);
+    gpWakeOldTex = nullptr;
 
     int32_t slot;
     slot = CTxdStore::FindTxdSlot("particleVC");
@@ -6469,7 +6543,7 @@ RwRGBA SmokeColor = { 0, 0, 0, 0 };
 class CParticleVC {
 public:
     CParticleVC() {
-        Events::initGameEvent += []() {
+        Events::initRwEvent += []() {
           //  AddParticles();
             ClearLogFile();
             CParticle::Initialise();
@@ -6682,7 +6756,7 @@ public:
             CParticle::Update();
             if (ParticlesReview) {
                 CVector vecDir;
-                CParticle::AddYardieDoorSmoke(FindPlayerCoors(-1), *FindPlayerPed()->GetMatrix());
+                //CParticle::AddYardieDoorSmoke(FindPlayerCoors(-1), *FindPlayerPed()->GetMatrix());
                 // If player have a vehicle right now, use vehicles velocity, otherwise, use players
                 if (FindPlayerVehicle(-1, false)) {
                     vecDir = 0.85f * FindPlayerVehicle(-1, false)->m_vecMoveSpeed;

@@ -1,0 +1,66 @@
+[RUS]
+VCParticles - это перенос системы частиц с GTA Vice City в GTA San Andreas, заменяя почти все возможные частицы в игре.
+Внимание: модификация подтвержденна в стабильности, но если у вас есть моды, которые меняют стандартные частицы, рекомендую их удалить.
+Мод отлично подойдет для людей, у которых GTA не напичкана 1000 модами
+(впринципе мод будет работать, пока там не появится ещё мод на эффект, ибо конфликты ж будут)
+Заменены все (почти) частицы в игре, а именно:
+дым от выхлопа, дым от двигателя, дым от колёс, частицы колёс (пыль, песок, вода т.д.), вспышки от выстрелов,
+дым от выстрелов, дым и вода от шагов,
+птицы, частицы попадания пуль (искры, пыль, т.д.), частицы крови, гильзы от оружий, дождь, частицы воды, частицы воды на крышах авто, искры,
+частицы повреждения автомобиля, пыль от вертолёта, всплески, частицы огнемёта, огнетушителя, и балончика с краской, искры и дым от пробитых шин,
+частицы взрывов (с взрывной волной!), частицы от комбайна (когда наезжаете на людей), огонь от двигателя, дым от ракет, дым от Cropduster и Stuntplane, 
+дым от повреждения самолёта, дым от тушения огня и всплесков воды от пожарной машины, частицы удара кулаком в объекты, и много, МНОГО других!
+
+Не обошлось и без бонусов! Мод также добавляет корабли на горизонте, частицы на воде, жуки которых вы видели в далеке,
+и самое интересное, это снег!
+Наткнулся на идею со снегом на Discord сервере plugin-sdk (спасибо SpitFire),
+решил воссоздать и в SA, и получилось, ну очень красиво!
+
+Мод предоставляет целых двенадцать CLEO опкодов, которые позволяют использовать мод во всей красе, в ваших CLEO скриптах.
+Подробное описание их использование расписанно в файле "VCParticles CLEO Opcodes documentation.txt"
+Для разработчиков .ASI плагинов, я экспортировал 13 функций, которые действуют по тому же принципу, что и CLEO опкоды (Вы их по сути и используете в CLEO опкодах).
+Мод предоставляет оригинальный файл particle.cfg с GTA Vice City, что позволяет ставить всякие правки .cfg файла с интернета, менять всякие параметры частиц, по типу цвета, продолжительности, размера, дальности, и многое другое.
+Если у вас есть debug menu от The Hero (aka aap), вы можете с лёгкостью, перезагрузить .ini и .cfg файлы прямо в игре, без перезахода! (Внимание: не все настройки в .ini файле могут перезагрузиться, прийдётся перезайти)
+В том же меню, есть и другие опции, например: включить частицы за игроком (В основном используется для теста), размер частиц, включить логи, т.д.
+Каждую замену частицы, можно переключать в .ini файле.
+Не все частицы удалось заменить, из-за осложнений!!! В качестве извинений, я дал вам эти опкоды CLEO :)
+
+Качество текстур можно улучшить, поставив любой мод на particle.txd или particle.cfg (Важно что бы он был для GTA VC! Но если он для GTA III, то не забудьте добавить текстуры, и строчки в .cfg файл, которые в Вайс Сити. Также, не забудьте текстуру снега)
+
+[ENG]
+VCParticles is a mod that transfers the particle system from GTA Vice City to GTA San Andreas, replacing nearly all possible particles in the game. 
+
+Attention: The modification has been confirmed to be stable, but if you have mods that change the standard particles, it is recommended to remove them.
+This mod is perfect for people whose GTA isn't overloaded with 1000 mods (basically, the mod will work until another mod affecting effects appears, as conflicts will arise). 
+
+All (almost) particles in the game have been replaced, namely:
+ exhaust smoke, engine smoke, tire smoke, wheel particles (dust, sand, water, etc.),
+ gunfire flashes, gunfire smoke,
+ footstep smoke and water, birds, bullet hit particles (sparks, dust, etc.),
+ blood particles, weapon casings, rain, water particles, water particles on car roofs, sparks,
+ vehicle damage particles, helicopter dust, splashes,
+ flamethrower particles, fire extinguisher and paint canister particles,
+ sparks and smoke from punctured tires, explosion particles (with shockwave!),
+ combine harvester particles (when running over people),
+ engine fire, rocket smoke, Cropduster and Stuntplane smoke,
+ aircraft damage smoke, fire extinguishing smoke and water splashes from fire trucks,
+ fist impact particles on objects, and many, MANY others!
+Not all particles could be replaces, due to complications!!! As a apology, i gave y'all these CLEO opcodes :)
+
+There are also bonuses! The mod also adds ships on the horizon, particles on the water, bugs that you saw in the distance, and the most interesting thing is snow! 
+
+I came across the idea with snow on the Discord server plugin-sdk (thanks to SpitFire), decided to recreate it in SA, and it turned out to be very beautiful!
+
+The mod provides a total of thirteen CLEO opcodes, which allow you to use the mod in all its glory in your CLEO scripts. Detailed description of their usage is described in the file "VCParticles CLEO Opcodes documentation.txt". 
+
+For .ASI plugin developers, I exported 13 functions that work on the same principle as CLEO opcodes (you essentially use them in CLEO opcodes). 
+
+The mod provides the original particle.cfg file from GTA Vice City, allowing you to make various edits to the .cfg file from the Internet, change various particle parameters such as color, duration, size, distance, and much more. 
+
+If you have The Hero's debug menu (aka aap), you can easily reload .ini and .cfg files right in the game without re-entering! (Note: not all settings in the .ini file may reload, you may have to re-enter). 
+
+In the same menu, there are other options, for example: enable particles behind the player (mainly used for testing), particle size, enable logs, etc. 
+
+Each particle replacement can be toggled in the .ini file.
+
+You can improve the texture quality by installing any mod for particle.txd or particle.cfg (it is important that it is for GTA VC! But if it's for GTA III, don't forget to add textures and lines in the .cfg file that are in Vice City. Also, don't forget the snow texture).

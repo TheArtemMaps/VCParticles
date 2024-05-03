@@ -16,6 +16,7 @@ Paste the following at the end:
 1346: stir_ground_around_object 15@ radius 1.0 density 5
 1347: update_boat $CS_SHIP foam_animation
 1348: start_boat_foam_animation
+1349: add_yardie_door_smoke_at x 20@ y 21@ z 22@ attach_to_object 1@
 
 2. Open up SASCM.ini: sannybuilderdirectory\data\sa\SASCM.INI
 
@@ -33,6 +34,7 @@ Paste the following at the end:
 1346=3, stir_ground_around_object %1d% radius %2d% density %3d%
 1347=1, update_boat %1d% foam_animation
 1348=0, start_boat_foam_animation
+1349=4, add_yardie_door_smoke_at x %1d% y %2d% z %3d% attach_to_object %4d%
 # VCParticles Opcodes end
 
 4. Done!
@@ -51,9 +53,9 @@ Paste the following at the end:
   - `"FLYERS"`: Type of particle effect (Names are at the bottom).
   - `x, y, z`: Position coordinates.
   - `xdir, ydir, zdir`: Direction vector.
-  - `size`: Size of the particle.
-  - `r, g, b, a`: Color components (Red, Green, Blue, Alpha).
-  - `lifespan`: Lifespan of the particle.
+  - `size`: Size of the particle. Set 0 for default values
+  - `r, g, b, a`: Color components (Red, Green, Blue, Alpha). Set all 0 to for default values
+  - `lifespan`: Lifespan of the particle. Set 0 for default values
 
 ---
 
@@ -73,9 +75,9 @@ Paste the following at the end:
   - `x2, y2, z2`: Ending point coordinates.
   - `x3, y3, z3`: Direction vector.
   - `power`: Power of the particle effect.
-  - `size`: Size of the particle.
-  - `r, g, b, a`: Color components (Red, Green, Blue, Alpha).
-  - `lifespan`: Lifespan of the particle.
+  - `size`: Size of the particle. Set 0 for default values 
+  - `r, g, b, a`: Color components (Red, Green, Blue, Alpha). Set all 0 to for default values
+  - `lifespan`: Lifespan of the particle. Set 0 for default values
 
 ---
 
@@ -372,6 +374,9 @@ Should the particle object be removed?
     "HEATHAZE_IN_DIST"
     "SNOW"
 	"BOAT_WAKE"
+	"FERRY_CHIM_SMOKE"
+	"MULTIPLAYER_HIT"
+	"HYDRANT_STEAM"
 	
 Particle objects names for using in 1342:
     "PAVEMENT_STEAM" - thick white steam

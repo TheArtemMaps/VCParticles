@@ -77,7 +77,7 @@ void cParticleSystemMgr::LoadParticleData()
 				switch (param)
 				{
 				case CFG_PARAM_PARTICLE_TYPE_NAME:
-					//ASSERT(type < MAX_PARTICLES); // Crash :(
+					ASSERT(type < MAX_PARTICLES); // To make sure that there's no extra particles that don't even exist
 					entry = &m_aParticles[type];
 					ASSERT(entry != NULL);
 					entry->m_Type = (tParticleType)type++;

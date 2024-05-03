@@ -601,7 +601,7 @@ ThiscallEvent <AddressList <0x5E7228, H_CALL>, PRIORITY_AFTER, ArgPick5N<Fx_c*, 
 ThiscallEvent <AddressList<0x61D068, H_CALL, 0x73BADE, H_CALL, 0x4C08E0, H_CALL, 0x736374, H_CALL>, PRIORITY_AFTER, ArgPick5N<Fx_c*, 0, CVector*, 1, CVector*, 2, int, 3, float, 4>, void(Fx_c*, CVector*, CVector*, int, float)> BloodEvent;
 ThiscallEvent <AddressList<0x6DB402, H_CALL>, PRIORITY_AFTER, ArgPick5N<Fx_c*, 0, CVector*, 1, CVector*, 2, int, 3, float, 4>, void(Fx_c*, CVector*, CVector*, int, float)> HeliBloodEvent;
 ThiscallEvent <AddressList<0x6DF1A5, H_CALL, 0x6DEBE4, H_CALL>, PRIORITY_AFTER, ArgPick5N<CVehicle*, 0, CColPoint&, 1, uint32_t, 2, uint8_t, 3, uint8_t, 4>, void(CVehicle*, CColPoint&, uint32_t, uint8_t, uint8_t)> WheelDirtAndWaterEvent;
-CdeclEvent <AddressList<0x53E227, H_JUMP>, PRIORITY_BEFORE, ArgPickNone, void()> RenderEffectsEvent;
+CdeclEvent <AddressList</*0x53E227*/0x726AD0, /*H_JUMP*/H_CALL>, /*PRIORITY_BEFORE*/PRIORITY_AFTER, ArgPickNone, void()> RenderEffectsEvent;
 CdeclEvent <AddressList<0x53E52B, H_CALL>, PRIORITY_AFTER, ArgPickNone, void()> RenderFontsEvent;
 CdeclEvent <AddressList<0x6CD077, H_CALL, 0x6C6FD3, H_CALL>, PRIORITY_AFTER, ArgPick9N<CEntity* , 0,
     CPed* , 1,

@@ -11,6 +11,7 @@
 #include "CTimer.h"
 #include <game_sa/CGeneral.h>
 #include "plugin.h"
+#include <CStreaming.h>
 using namespace plugin;
 #define PERCENT(x, p)                    ((float(x) * (float(p) / 100.0f)))
 #define ARRAY_SIZE(array)                (sizeof(array) / sizeof(array[0]))
@@ -100,7 +101,8 @@ inline float Pow(float x, float y) { return powf(x, y); }
 #define SCREEN_SCALE_FROM_BOTTOM(a) (SCREEN_HEIGHT - SCREEN_SCALE_Y(a))
 #define SCREEN_STRETCH_FROM_RIGHT(a)  (SCREEN_WIDTH - SCREEN_STRETCH_X(a))
 #define SCREEN_STRETCH_FROM_BOTTOM(a) (SCREEN_HEIGHT - SCREEN_STRETCH_Y(a))
-
+extern uint8_t work_buff[55000];
+static bool IsModelLoaded(int32_t model) { return CStreaming::ms_aInfoForModel[model].m_nLoadState == eStreamingLoadState::LOADSTATE_LOADED; }
 enum CarPiece {
     CAR_PIECE_DEFAULT = 0,
     CAR_PIECE_BONNET,

@@ -243,6 +243,9 @@ void cParticleSystemMgr::LoadParticleData()
 				case CFG_PARAM_FLAGS:
 					entry->Flags = atoi(value);
 					break;
+				/*case CFG_PARAM_TEXTURE:
+				entry->m_ppRaster = (RwRaster**)value;
+				break;*/
 				}
 
 				value = strtok(NULL, delims);

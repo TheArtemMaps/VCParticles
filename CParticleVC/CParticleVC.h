@@ -92,7 +92,7 @@ public:
 
 	static void HandleShipsAtHorizonStuff();
 	static void HandleShootableBirdsStuff(CEntity* entity, CVector const& camPos);
-	static void HandleShootableBirdsStuff2(const CVector* pointA, const CVector* pointB);
+	static void HandleShootableBirdsStuff2(CEntity* entity, const CVector* pointA, const CVector* pointB);
 };
 
 class CSpecialParticleStuff {
@@ -113,5 +113,6 @@ extern RwRaster* gpRainDripRaster[];
 extern RwRaster* gpRainDripDarkRaster[];
 extern RwTexture* coronaringa;
 extern bool ExplosionsParticles;
+extern bool WaterDrops;
 
 VALIDATE_SIZE(CParticle, 0x58);

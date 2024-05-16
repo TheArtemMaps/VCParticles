@@ -17,7 +17,7 @@
 #include "CVehicle.h"
 #include "CWaterLevel.h"
 #include "CWorld.h"
-#include "M:/My Projects/VCMarkersSA/VCMarkersSA/MemoryMgr.h"
+#include "MemoryMgr.h"
 #include "CAudioEngine.h"
 #include "CFireManager.h"
 #include "extensions\ScriptCommands.h"

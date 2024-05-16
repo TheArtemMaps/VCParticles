@@ -1,7 +1,7 @@
 #include "plugin.h"
 
 #include "Buoyancy.h"
-#include "M:/My Projects/VCMarkersSA/VCMarkersSA/MemoryMgr.h"
+#include "MemoryMgr.h"
 #include "CParticleVC.h"
 #include <game_sa/CGeneral.h>
 #include "CTimeCycle.h"

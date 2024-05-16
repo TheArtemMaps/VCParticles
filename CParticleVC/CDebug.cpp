@@ -167,14 +167,15 @@ CDebug::DisplayScreenStrings()
 	CFont::SetDropColor(CRGBA(0, 0, 0, 255));
 
 	for (i = 0; i < ms_nScreenStrs; i++) {
-		/*
-				AsciiToUnicode(ms_aScreenStrs[i].str, gUString);
+		
+				AsciiToUnicode(ms_aScreenStrs[i].str, re3_buff);
 				CFont::SetColor(CRGBA(0, 0, 0, 255));
-				CFont::PrintString(ms_aScreenStrs[i].x, ms_aScreenStrs[i].y, gUString);
+				CFont::PrintString(ms_aScreenStrs[i].x, ms_aScreenStrs[i].y, re3_buff);
 				CFont::SetColor(CRGBA(255, 255, 255, 255));
-				CFont::PrintString(ms_aScreenStrs[i].x+1, ms_aScreenStrs[i].y+1, gUString);
-		*/
-		ObrsPrintfString(ms_aScreenStrs[i].str, ms_aScreenStrs[i].x, ms_aScreenStrs[i].y);
+				CFont::PrintString(ms_aScreenStrs[i].x+1, ms_aScreenStrs[i].y+1, re3_buff);
+		
+		//log(ms_aScreenStrs[i].str, ms_aScreenStrs[i].x, ms_aScreenStrs[i].y);
+		//debug(ms_aScreenStrs[i].str, ms_aScreenStrs[i].x, ms_aScreenStrs[i].y);
 	}
 	CFont::DrawFonts();
 

@@ -1,494 +1,442 @@
-#define WITHD3D
-#include "common.h"
-
-#ifdef EXTENDED_COLOURFILTER
-
-#ifndef LIBRW
-#error "Need librw for EXTENDED_COLOURFILTER"
-#endif
-
-#include "main.h"
-#include "RwHelper.h"
-#include "Camera.h"
-#include "MBlur.h"
+#include "plugin.h"
 #include "postfx.h"
+#include "Utility.h"
+//RwRaster *CMBlur2::pBackBuffer;
 
-RwRaster *CPostFX::pFrontBuffer;
-RwRaster *CPostFX::pBackBuffer;
-bool CPostFX::bJustInitialised;
-int CPostFX::EffectSwitch = POSTFX_NORMAL;
-bool CPostFX::BlurOn = false;
-bool CPostFX::MotionBlurOn = false;
+RwRaster *CMBlur2::ms_pRadiosityRaster1;
+RwRaster *CMBlur2::ms_pRadiosityRaster2;
+RwIm2DVertex CMBlur2::ms_radiosityVerts[44];
+RwImVertexIndex CMBlur2::ms_radiosityIndices[7*6] = {
+	0, 1, 2, 2, 1, 3,
+		4, 5, 2, 2, 5, 3,
+	4, 5, 6, 6, 5, 7,
+		8, 9, 6, 6, 9, 7,
+	8, 9, 10, 10, 9, 11,
+		12, 13, 10, 10, 13, 11,
+	12, 13, 14, 14, 13, 15,
+};
 
-static RwIm2DVertex Vertex[4];
-static RwIm2DVertex Vertex2[4];
-static RwImVertexIndex Index[6] = { 0, 1, 2, 0, 2, 3 };
 
-#ifdef RW_D3D9
-void *colourfilterVC_PS;
-void *contrast_PS;
-#endif
-#ifdef RW_OPENGL
-int32 u_blurcolor;
-int32 u_contrastAdd;
-int32 u_contrastMult;
-rw::gl3::Shader *colourFilterVC;
-rw::gl3::Shader *contrast;
-#endif
+extern RwD3D9Vertex *blurVertices;
+extern RwImVertexIndex *blurIndices;
+
+RwD3D9Vertex screen_vertices[24];
+RwImVertexIndex screen_indices[] = {
+	0, 1, 2, 2, 1, 3,
+	4, 5, 6, 6, 5, 7,
+	8, 9, 10, 10, 9, 11,
+};
+
+static void *contrastPS;
+
 
 void
-CPostFX::InitOnce(void)
+makequad(RwCamera *cam, RwIm2DVertex *v, int width, int height, int texwidth = 0, int texheight = 0)
 {
-#ifdef RW_OPENGL
-	u_blurcolor = rw::gl3::registerUniform("u_blurcolor");
-	u_contrastAdd = rw::gl3::registerUniform("u_contrastAdd");
-	u_contrastMult = rw::gl3::registerUniform("u_contrastMult");
-#endif
-}
+	float w, h, tw, th;
+	w = width;
+	h = height;
+	tw = texwidth > 0 ? texwidth : w;
+	th = texheight > 0 ? texheight : h;
 
+	const float nearz = RwIm2DGetNearScreenZ();
+	const float recipz = 1.0f/RwCameraGetNearClipPlane(cam);
+
+	RwIm2DVertexSetScreenX(&v[0], 0);
+	RwIm2DVertexSetScreenY(&v[0], 0);
+	RwIm2DVertexSetScreenZ(&v[0], 0);
+	RwIm2DVertexSetCameraZ(&v[0], nearz);
+	RwIm2DVertexSetRecipCameraZ(&v[0], recipz);
+	RwIm2DVertexSetU(&v[0], 0.5f / tw, recipz);
+	RwIm2DVertexSetV(&v[0], 0.5f / th, recipz);
+	RwIm2DVertexSetIntRGBA(&v[0], 255, 255, 255, 255);
+
+	RwIm2DVertexSetScreenX(&v[1], 0);
+	RwIm2DVertexSetScreenY(&v[1], h);
+	RwIm2DVertexSetScreenZ(&v[1], 0);
+	RwIm2DVertexSetCameraZ(&v[1], nearz);
+	RwIm2DVertexSetRecipCameraZ(&v[1], recipz);
+	RwIm2DVertexSetU(&v[1], 0.5f / tw, recipz);
+	RwIm2DVertexSetV(&v[1], (h + 0.5f) / th, recipz);
+	RwIm2DVertexSetIntRGBA(&v[1], 255, 255, 255, 255);
+
+	RwIm2DVertexSetScreenX(&v[2], w);
+	RwIm2DVertexSetScreenY(&v[2], 0);
+	RwIm2DVertexSetScreenZ(&v[2], 0);
+	RwIm2DVertexSetCameraZ(&v[2], nearz);
+	RwIm2DVertexSetRecipCameraZ(&v[2], recipz);
+	RwIm2DVertexSetU(&v[2], (w + 0.5f) / tw, recipz);
+	RwIm2DVertexSetV(&v[2], 0.5f / th, recipz);
+	RwIm2DVertexSetIntRGBA(&v[2], 255, 255, 255, 255);
+
+	RwIm2DVertexSetScreenX(&v[3], w);
+	RwIm2DVertexSetScreenY(&v[3], h);
+	RwIm2DVertexSetScreenZ(&v[3], 0);
+	RwIm2DVertexSetCameraZ(&v[3], nearz);
+	RwIm2DVertexSetRecipCameraZ(&v[3], recipz);
+	RwIm2DVertexSetU(&v[3], (w + 0.5f) / tw, recipz);
+	RwIm2DVertexSetV(&v[3], (h + 0.5f) / th, recipz);
+	RwIm2DVertexSetIntRGBA(&v[3], 255, 255, 255, 255);
+}
+RwRaster* pBackBuffer;
 void
-CPostFX::Open(RwCamera *cam)
+CMBlur2::Initialise(void)
 {
-	if(pFrontBuffer)
-		Close();
-
-	uint32 width  = Pow(2.0f, int32(log2(RwRasterGetWidth (RwCameraGetRaster(cam))))+1);
-	uint32 height = Pow(2.0f, int32(log2(RwRasterGetHeight(RwCameraGetRaster(cam))))+1);
-	uint32 depth  = RwRasterGetDepth(RwCameraGetRaster(cam));
-	pFrontBuffer = RwRasterCreate(width, height, depth, rwRASTERTYPECAMERATEXTURE);
-	pBackBuffer = RwRasterCreate(width, height, depth, rwRASTERTYPECAMERATEXTURE);
-	bJustInitialised = true;
-
-	float zero, xmax, ymax;
-
-	if(RwRasterGetDepth(RwCameraGetRaster(cam)) == 16){
-		zero = HALFPX;
-		xmax = width + HALFPX;
-		ymax = height + HALFPX;
-	}else{
-		zero = -HALFPX;
-		xmax = width - HALFPX;
-		ymax = height - HALFPX;
-	}
-
-	RwIm2DVertexSetScreenX(&Vertex[0], zero);
-	RwIm2DVertexSetScreenY(&Vertex[0], zero);
-	RwIm2DVertexSetScreenZ(&Vertex[0], RwIm2DGetNearScreenZ());
-	RwIm2DVertexSetCameraZ(&Vertex[0], RwCameraGetNearClipPlane(cam));
-	RwIm2DVertexSetRecipCameraZ(&Vertex[0], 1.0f/RwCameraGetNearClipPlane(cam));
-	RwIm2DVertexSetU(&Vertex[0], 0.0f, 1.0f/RwCameraGetNearClipPlane(cam));
-	RwIm2DVertexSetV(&Vertex[0], 0.0f, 1.0f/RwCameraGetNearClipPlane(cam));
-	RwIm2DVertexSetIntRGBA(&Vertex[0], 255, 255, 255, 255);
-
-	RwIm2DVertexSetScreenX(&Vertex[1], zero);
-	RwIm2DVertexSetScreenY(&Vertex[1], ymax);
-	RwIm2DVertexSetScreenZ(&Vertex[1], RwIm2DGetNearScreenZ());
-	RwIm2DVertexSetCameraZ(&Vertex[1], RwCameraGetNearClipPlane(cam));
-	RwIm2DVertexSetRecipCameraZ(&Vertex[1], 1.0f/RwCameraGetNearClipPlane(cam));
-	RwIm2DVertexSetU(&Vertex[1], 0.0f, 1.0f/RwCameraGetNearClipPlane(cam));
-	RwIm2DVertexSetV(&Vertex[1], 1.0f, 1.0f/RwCameraGetNearClipPlane(cam));
-	RwIm2DVertexSetIntRGBA(&Vertex[1], 255, 255, 255, 255);
-
-	RwIm2DVertexSetScreenX(&Vertex[2], xmax);
-	RwIm2DVertexSetScreenY(&Vertex[2], ymax);
-	RwIm2DVertexSetScreenZ(&Vertex[2], RwIm2DGetNearScreenZ());
-	RwIm2DVertexSetCameraZ(&Vertex[2], RwCameraGetNearClipPlane(cam));
-	RwIm2DVertexSetRecipCameraZ(&Vertex[2], 1.0f/RwCameraGetNearClipPlane(cam));
-	RwIm2DVertexSetU(&Vertex[2], 1.0f, 1.0f/RwCameraGetNearClipPlane(cam));
-	RwIm2DVertexSetV(&Vertex[2], 1.0f, 1.0f/RwCameraGetNearClipPlane(cam));
-	RwIm2DVertexSetIntRGBA(&Vertex[2], 255, 255, 255, 255);
-
-	RwIm2DVertexSetScreenX(&Vertex[3], xmax);
-	RwIm2DVertexSetScreenY(&Vertex[3], zero);
-	RwIm2DVertexSetScreenZ(&Vertex[3], RwIm2DGetNearScreenZ());
-	RwIm2DVertexSetCameraZ(&Vertex[3], RwCameraGetNearClipPlane(cam));
-	RwIm2DVertexSetRecipCameraZ(&Vertex[3], 1.0f/RwCameraGetNearClipPlane(cam));
-	RwIm2DVertexSetU(&Vertex[3], 1.0f, 1.0f/RwCameraGetNearClipPlane(cam));
-	RwIm2DVertexSetV(&Vertex[3], 0.0f, 1.0f/RwCameraGetNearClipPlane(cam));
-	RwIm2DVertexSetIntRGBA(&Vertex[3], 255, 255, 255, 255);
-
-
-	RwIm2DVertexSetScreenX(&Vertex2[0], zero + 2.0f);
-	RwIm2DVertexSetScreenY(&Vertex2[0], zero + 2.0f);
-	RwIm2DVertexSetScreenZ(&Vertex2[0], RwIm2DGetNearScreenZ());
-	RwIm2DVertexSetCameraZ(&Vertex2[0], RwCameraGetNearClipPlane(cam));
-	RwIm2DVertexSetRecipCameraZ(&Vertex2[0], 1.0f/RwCameraGetNearClipPlane(cam));
-	RwIm2DVertexSetU(&Vertex2[0], 0.0f, 1.0f/RwCameraGetNearClipPlane(cam));
-	RwIm2DVertexSetV(&Vertex2[0], 0.0f, 1.0f/RwCameraGetNearClipPlane(cam));
-	RwIm2DVertexSetIntRGBA(&Vertex2[0], 255, 255, 255, 255);
-
-	RwIm2DVertexSetScreenX(&Vertex2[1], 2.0f);
-	RwIm2DVertexSetScreenY(&Vertex2[1], ymax + 2.0f);
-	RwIm2DVertexSetScreenZ(&Vertex2[1], RwIm2DGetNearScreenZ());
-	RwIm2DVertexSetCameraZ(&Vertex2[1], RwCameraGetNearClipPlane(cam));
-	RwIm2DVertexSetRecipCameraZ(&Vertex2[1], 1.0f/RwCameraGetNearClipPlane(cam));
-	RwIm2DVertexSetU(&Vertex2[1], 0.0f, 1.0f/RwCameraGetNearClipPlane(cam));
-	RwIm2DVertexSetV(&Vertex2[1], 1.0f, 1.0f/RwCameraGetNearClipPlane(cam));
-	RwIm2DVertexSetIntRGBA(&Vertex2[1], 255, 255, 255, 255);
-
-	RwIm2DVertexSetScreenX(&Vertex2[2], xmax + 2.0f);
-	RwIm2DVertexSetScreenY(&Vertex2[2], ymax + 2.0f);
-	RwIm2DVertexSetScreenZ(&Vertex2[2], RwIm2DGetNearScreenZ());
-	RwIm2DVertexSetCameraZ(&Vertex2[2], RwCameraGetNearClipPlane(cam));
-	RwIm2DVertexSetRecipCameraZ(&Vertex2[2], 1.0f/RwCameraGetNearClipPlane(cam));
-	RwIm2DVertexSetU(&Vertex2[2], 1.0f, 1.0f/RwCameraGetNearClipPlane(cam));
-	RwIm2DVertexSetV(&Vertex2[2], 1.0f, 1.0f/RwCameraGetNearClipPlane(cam));
-	RwIm2DVertexSetIntRGBA(&Vertex2[2], 255, 255, 255, 255);
-
-	RwIm2DVertexSetScreenX(&Vertex2[3], xmax + 2.0f);
-	RwIm2DVertexSetScreenY(&Vertex2[3], zero + 2.0f);
-	RwIm2DVertexSetScreenZ(&Vertex2[3], RwIm2DGetNearScreenZ());
-	RwIm2DVertexSetCameraZ(&Vertex2[3], RwCameraGetNearClipPlane(cam));
-	RwIm2DVertexSetRecipCameraZ(&Vertex2[3], 1.0f/RwCameraGetNearClipPlane(cam));
-	RwIm2DVertexSetU(&Vertex2[3], 1.0f, 1.0f/RwCameraGetNearClipPlane(cam));
-	RwIm2DVertexSetV(&Vertex2[3], 0.0f, 1.0f/RwCameraGetNearClipPlane(cam));
-	RwIm2DVertexSetIntRGBA(&Vertex2[3], 255, 255, 255, 255);
-
-
-#ifdef RW_D3D9
-#include "shaders/obj/colourfilterVC_PS.inc"
-	colourfilterVC_PS = rw::d3d::createPixelShader(colourfilterVC_PS_cso);
-#include "shaders/obj/contrastPS.inc"
-	contrast_PS = rw::d3d::createPixelShader(contrastPS_cso);
-#endif
-#ifdef RW_OPENGL
-	using namespace rw::gl3;
-
-	{
-#include "shaders/obj/im2d_vert.inc"
-#include "shaders/obj/colourfilterVC_frag.inc"
-	const char *vs[] = { shaderDecl, header_vert_src, im2d_vert_src, nil };
-	const char *fs[] = { shaderDecl, header_frag_src, colourfilterVC_frag_src, nil };
-	colourFilterVC = Shader::create(vs, fs);
-	assert(colourFilterVC);
-	}
-
-	{
-#include "shaders/obj/im2d_vert.inc"
-#include "shaders/obj/contrast_frag.inc"
-	const char *vs[] = { shaderDecl, header_vert_src, im2d_vert_src, nil };
-	const char *fs[] = { shaderDecl, header_frag_src, contrast_frag_src, nil };
-	contrast = Shader::create(vs, fs);
-	assert(contrast);
-	}
-
-#endif
+	//if(pBackBuffer){
+	//	RwRasterDestroy(pBackBuffer);
+		//pBackBuffer = NULL;
+	//}
+	//if(pBackBuffer == NULL)
+		pBackBuffer = RwRasterCreate(RwRasterGetWidth(pFrontBuffer),
+			RwRasterGetHeight(pFrontBuffer),
+			RwRasterGetDepth(pFrontBuffer),
+			rwRASTERTYPECAMERATEXTURE);
+	//if(RwD3D9Supported())
+		//if(contrastPS == nil){
+		//	#include "contrastPS.h"
+		//	RwD3D9CreatePixelShader((RwUInt32*)g_ps20_main, &contrastPS);
+		//	assert(contrastPS);
+	//	}
 }
 
+/* PS2 code. frame*blurcolour is added to frame, equivalent to multiplication by 255+blurcolour, i.e. it can only brighten.
+ * LCS PSP multiplies final frame with 255-blurcolour, i.e. it can only darken. */
 void
-CPostFX::Close(void)
+CMBlur2::OverlayRender_leeds(RwCamera *cam, RwRaster *frontbuf, RwRGBA *col, uint8_t type)
 {
-	if(pFrontBuffer){
-		RwRasterDestroy(pFrontBuffer);
-		pFrontBuffer = nil;
-	}
-	if(pBackBuffer){
-		RwRasterDestroy(pBackBuffer);
-		pBackBuffer = nil;
-	}
-#ifdef RW_D3D9
-	if(colourfilterVC_PS){
-		rw::d3d::destroyPixelShader(colourfilterVC_PS);
-		colourfilterVC_PS = nil;
-	}
-	if(contrast_PS){
-		rw::d3d::destroyPixelShader(contrast_PS);
-		contrast_PS = nil;
-	}
-#endif
-#ifdef RW_OPENGL
-	if(colourFilterVC){
-		colourFilterVC->destroy();
-		colourFilterVC = nil;
-	}
-	if(contrast){
-		contrast->destroy();
-		contrast = nil;
-	}
-#endif
-}
-
-void
-CPostFX::RenderOverlayBlur(RwCamera *cam, int32 r, int32 g, int32 b, int32 a)
-{
-	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, pFrontBuffer);
-	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)TRUE);
-
-	RwIm2DVertexSetIntRGBA(&Vertex[0], r*2, g*2, b*2, 30);
-	RwIm2DVertexSetIntRGBA(&Vertex[1], r*2, g*2, b*2, 30);
-	RwIm2DVertexSetIntRGBA(&Vertex[2], r*2, g*2, b*2, 30);
-	RwIm2DVertexSetIntRGBA(&Vertex[3], r*2, g*2, b*2, 30);
-	RwIm2DVertexSetIntRGBA(&Vertex2[0], r*2, g*2, b*2, 30);
-	RwIm2DVertexSetIntRGBA(&Vertex2[1], r*2, g*2, b*2, 30);
-	RwIm2DVertexSetIntRGBA(&Vertex2[2], r*2, g*2, b*2, 30);
-	RwIm2DVertexSetIntRGBA(&Vertex2[3], r*2, g*2, b*2, 30);
-
-	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
-	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
-
-	RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, BlurOn ? Vertex2 : Vertex, 4, Index, 6);
-
-
-	RwIm2DVertexSetIntRGBA(&Vertex2[0], r, g, b, a);
-	RwIm2DVertexSetIntRGBA(&Vertex[0], r, g, b, a);
-	RwIm2DVertexSetIntRGBA(&Vertex2[1], r, g, b, a);
-	RwIm2DVertexSetIntRGBA(&Vertex[1], r, g, b, a);
-	RwIm2DVertexSetIntRGBA(&Vertex2[2], r, g, b, a);
-	RwIm2DVertexSetIntRGBA(&Vertex[2], r, g, b, a);
-	RwIm2DVertexSetIntRGBA(&Vertex2[3], r, g, b, a);
-	RwIm2DVertexSetIntRGBA(&Vertex[3], r, g, b, a);
-
-	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
-	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDONE);
-
-	RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, Vertex, 4, Index, 6);
-	RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, BlurOn ? Vertex2 : Vertex, 4, Index, 6);
-}
-
-void
-CPostFX::RenderOverlaySniper(RwCamera *cam, int32 r, int32 g, int32 b, int32 a)
-{
-	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, pFrontBuffer);
-	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)TRUE);
-
-	RwIm2DVertexSetIntRGBA(&Vertex[0], r, g, b, 80);
-	RwIm2DVertexSetIntRGBA(&Vertex[1], r, g, b, 80);
-	RwIm2DVertexSetIntRGBA(&Vertex[2], r, g, b, 80);
-	RwIm2DVertexSetIntRGBA(&Vertex[3], r, g, b, 80);
-	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
-	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
-
-	RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, Vertex, 4, Index, 6);
-}
-
-float CPostFX::Intensity = 1.0f;
-
-void
-CPostFX::RenderOverlayShader(RwCamera *cam, int32 r, int32 g, int32 b, int32 a)
-{
-	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, pBackBuffer);
-
-	if(EffectSwitch == POSTFX_MOBILE){
-		float mult[3], add[3];
-		mult[0] = (r-64)/256.0f + 1.4f;
-		mult[1] = (g-64)/256.0f + 1.4f;
-		mult[2] = (b-64)/256.0f + 1.4f;
-		add[0] = r/1536.f - 0.05f;
-		add[1] = g/1536.f - 0.05f;
-		add[2] = b/1536.f - 0.05f;
-#ifdef RW_D3D9
-		rw::d3d::d3ddevice->SetPixelShaderConstantF(10, mult, 1);
-		rw::d3d::d3ddevice->SetPixelShaderConstantF(11, add, 1);
-
-		rw::d3d::im2dOverridePS = contrast_PS;
-#endif
-#ifdef RW_OPENGL
-		rw::gl3::im2dOverrideShader = contrast;
-		contrast->use();
-		glUniform3fv(contrast->uniformLocations[u_contrastMult], 1, mult);
-		glUniform3fv(contrast->uniformLocations[u_contrastAdd], 1, add);
-#endif
-	}else{
-		float f = Intensity;
-		float blurcolors[4];
-		blurcolors[0] = r*f/255.0f;
-		blurcolors[1] = g*f/255.0f;
-		blurcolors[2] = b*f/255.0f;
-		blurcolors[3] = 30/255.0f;
-#ifdef RW_D3D9
-		rw::d3d::d3ddevice->SetPixelShaderConstantF(10, blurcolors, 1);
-		rw::d3d::im2dOverridePS = colourfilterVC_PS;
-#endif
-#ifdef RW_OPENGL
-		rw::gl3::im2dOverrideShader = colourFilterVC;
-		colourFilterVC->use();
-		glUniform4fv(colourFilterVC->uniformLocations[u_blurcolor], 1, blurcolors);
-#endif
-	}
-	RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, Vertex, 4, Index, 6);
-#ifdef RW_D3D9
-	rw::d3d::im2dOverridePS = nil;
-#endif
-#ifdef RW_OPENGL
-	rw::gl3::im2dOverrideShader = nil;
-#endif
-}
-
-void
-CPostFX::RenderMotionBlur(RwCamera *cam, uint32 blur)
-{
-	if(blur == 0)
-		return;
-
-	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, pFrontBuffer);
-	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)TRUE);
-	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
-	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
-
-	RwIm2DVertexSetIntRGBA(&Vertex[0], 255, 255, 255, blur);
-	RwIm2DVertexSetIntRGBA(&Vertex[1], 255, 255, 255, blur);
-	RwIm2DVertexSetIntRGBA(&Vertex[2], 255, 255, 255, blur);
-	RwIm2DVertexSetIntRGBA(&Vertex[3], 255, 255, 255, blur);
-
-	RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, Vertex, 4, Index, 6);
-}
-
-bool
-CPostFX::NeedBackBuffer(void)
-{
-	// Current frame -- needed for non-blur effect
-	switch(EffectSwitch){
-	case POSTFX_OFF:
-	case POSTFX_SIMPLE:
-		// no actual rendering here
-		return false;
-	case POSTFX_NORMAL:
-		if(MotionBlurOn)
-			return false;
-		else
-			return true;
-	case POSTFX_MOBILE:
-		return true;
-	}
-	return false;
-}
-
-bool
-CPostFX::NeedFrontBuffer(int32 type)
-{
-	// Last frame -- needed for motion blur
-	if(CMBlur::Drunkness > 0.0f)
-		return true;
-	if(type == MOTION_BLUR_SNIPER)
-		return true;
-
-	switch(EffectSwitch){
-	case POSTFX_OFF:
-	case POSTFX_SIMPLE:
-		// no actual rendering here
-		return false;
-	case POSTFX_NORMAL:
-		if(MotionBlurOn)
-			return true;
-		else
-			return false;
-	case POSTFX_MOBILE:
-		return false;
-	}
-	return false;
-}
-
-void
-CPostFX::GetBackBuffer(RwCamera *cam)
-{
-	RwRasterPushContext(pBackBuffer);
-	RwRasterRenderFast(RwCameraGetRaster(cam), 0, 0);
-	RwRasterPopContext();
-}
-
-void
-CPostFX::Render(RwCamera *cam, uint32 red, uint32 green, uint32 blue, uint32 blur, int32 type, uint32 bluralpha)
-{
-	PUSH_RENDERGROUP("CPostFX::Render");
-
-	if(pFrontBuffer == nil)
-		Open(cam);
-	assert(pFrontBuffer);
-	assert(pBackBuffer);
-
-	if(type == MOTION_BLUR_LIGHT_SCENE){
-		SmoothColor(red, green, blue, blur);
-		red = AvgRed;
-		green = AvgGreen;
-		blue = AvgBlue;
-		blur = AvgAlpha;
-	}
-
-	if(NeedBackBuffer())
-		GetBackBuffer(cam);
+	int i;
+	int bufw, bufh;
+	int screenw, screenh;
+	int blurintensity;
+	int motionblurintensity;
 
 	DefinedState();
-
-	RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)FALSE);
 	RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERNEAREST);
-	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)FALSE);
-	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)FALSE);
+	RwRenderStateSet(rwRENDERSTATEFOGENABLE, 0);
+	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, 0);
+	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, 0);
+	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)1);
 
-	if(type == MOTION_BLUR_SNIPER){
-		if(!bJustInitialised)
-			RenderOverlaySniper(cam, red, green, blue, blur);
-	}else switch(EffectSwitch){
-	case POSTFX_OFF:
-	case POSTFX_SIMPLE:
-		// no actual rendering here
-		break;
-	case POSTFX_NORMAL:
-		if(MotionBlurOn){
-			if(!bJustInitialised)
-				RenderOverlayBlur(cam, red, green, blue, blur);
-		}else{
-			RenderOverlayShader(cam, red, green, blue, blur);
-		}
-		break;
-	case POSTFX_MOBILE:
-		RenderOverlayShader(cam, red, green, blue, blur);
-		break;
+	bufw = RwRasterGetWidth(frontbuf);
+	bufh = RwRasterGetHeight(frontbuf);
+	screenw = RwCameraGetRaster(cam)->width;
+	screenh = RwCameraGetRaster(cam)->height;
+
+	blurintensity = 0.8f;
+	motionblurintensity = 32;
+
+	// Blur
+	makequad(cam, screen_vertices, screenw, screenh, bufw, bufh);
+	for(i = 0; i < 4; i++){
+		screen_vertices[i].x += 1.0f;
+		RwIm2DVertexSetIntRGBA(&screen_vertices[i], 255, 255, 255, blurintensity);
+	}
+	makequad(cam, screen_vertices+4, screenw, screenh, bufw, bufh);
+	for(i = 4; i < 8; i++){
+		screen_vertices[i].x += 1.0f;
+		screen_vertices[i].y += 1.0f;
+		RwIm2DVertexSetIntRGBA(&screen_vertices[i], 255, 255, 255, blurintensity);
+	}
+	makequad(cam, screen_vertices+8, screenw, screenh, bufw, bufh);
+	for(i = 8; i < 12; i++){
+		screen_vertices[i].y += 1.0f;
+		RwIm2DVertexSetIntRGBA(&screen_vertices[i], 255, 255, 255, blurintensity);
 	}
 
-	if(!bJustInitialised)
-		RenderMotionBlur(cam, 175.0f * CMBlur::Drunkness);
+	// Colour filter
+	makequad(cam, screen_vertices+12, screenw, screenh, bufw, bufh);
+	for(i = 12; i < 16; i++)
+		RwIm2DVertexSetIntRGBA(&screen_vertices[i], col->red, col->green, col->blue, 255);
 
-	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)TRUE);
-	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)TRUE);
-	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, nil);
-	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)FALSE);
-	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
-	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
+	// Blend with last frame
+	makequad(cam, screen_vertices+16, screenw, screenh, bufw, bufh);
+	for(i = 16; i < 20; i++)
+		RwIm2DVertexSetIntRGBA(&screen_vertices[i], 255, 255, 255, motionblurintensity);
 
-	if(NeedFrontBuffer(type)){
-		RwRasterPushContext(pFrontBuffer);
-		RwRasterRenderFast(RwCameraGetRaster(cam), 0, 0);
-		RwRasterPopContext();
-		bJustInitialised = false;
-	}else
-		bJustInitialised = true;
+/*
+	makequad(cam, screen_vertices+20, screenw, screenh, bufw, bufh);
+	for(i = 20; i < 24; i++)
+		RwIm2DVertexSetIntRGBA(&screen_vertices[i], 0, 0, 0, 0);
+*/
 
-	POP_RENDERGROUP();
+	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, pBackBuffer);
+
+	// Blur
+	//if(config.trailsBlur){
+		RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
+		RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
+		RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, screen_vertices, 12, screen_indices, 3*6);
+	//}
+
+	// Apply colour filter
+	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
+	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDONE);
+	RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, screen_vertices+12, 4, screen_indices, 6);
+
+	// Motion blur
+	if(ms_bJustInitialised)
+		ms_bJustInitialised = false;
+	else{
+		RwRenderStateSet(rwRENDERSTATETEXTURERASTER, frontbuf);
+		RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
+		RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
+		RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, screen_vertices+16, 4, screen_indices, 6);
+	}
 }
 
-int CPostFX::PrevRed[NUMAVERAGE], CPostFX::AvgRed;
-int CPostFX::PrevGreen[NUMAVERAGE], CPostFX::AvgGreen;
-int CPostFX::PrevBlue[NUMAVERAGE], CPostFX::AvgBlue;
-int CPostFX::PrevAlpha[NUMAVERAGE], CPostFX::AvgAlpha;
-int CPostFX::Next;
-int CPostFX::NumValues;
-
-// This is rather annoying...the blur color can flicker slightly
-// which becomes very visible when amplified by the shader
 void
-CPostFX::SmoothColor(uint32 red, uint32 green, uint32 blue, uint32 alpha)
+CMBlur2::RadiosityInit(RwCamera *cam)
 {
-	PrevRed[Next] = red;
-	PrevGreen[Next] = green;
-	PrevBlue[Next] = blue;
-	PrevAlpha[Next] = alpha;
-	Next = (Next+1) % NUMAVERAGE;
-	NumValues = Min(NumValues+1, NUMAVERAGE);
-
-	AvgRed = 0;
-	AvgGreen = 0;
-	AvgBlue = 0;
-	AvgAlpha = 0;
-	for(int i = 0; i < NumValues; i++){
-		AvgRed += PrevRed[i];
-		AvgGreen += PrevGreen[i];
-		AvgBlue += PrevBlue[i];
-		AvgAlpha += PrevAlpha[i];
-	}
-	AvgRed /= NumValues;
-	AvgGreen /= NumValues;
-	AvgBlue /= NumValues;
-	AvgAlpha /= NumValues;
+	ms_pRadiosityRaster1 = RwRasterCreate(256, 128, RwCameraGetRaster(cam)->depth, rwRASTERTYPECAMERATEXTURE);
+	ms_pRadiosityRaster2 = RwRasterCreate(256, 128, RwCameraGetRaster(cam)->depth, rwRASTERTYPECAMERATEXTURE);
+//	ms_pRadiosityRaster1 = RwRasterCreate(pFrontBuffer->width, pFrontBuffer->height, pFrontBuffer->depth, rwRASTERTYPECAMERATEXTURE);
+//	ms_pRadiosityRaster2 = RwRasterCreate(pFrontBuffer->width, pFrontBuffer->height, pFrontBuffer->depth, rwRASTERTYPECAMERATEXTURE);
 }
 
-#endif
+void
+CMBlur2::RadiosityCreateImmediateData(RwCamera *cam)
+{
+	static float uOffsets[] = { -1.0f, 1.0f, 0.0f, 0.0f,   -1.0f, 1.0f, -1.0f, 1.0f };
+	static float vOffsets[] = { 0.0f, 0.0f, -1.0f, 1.0f,   -1.0f, -1.0f, 1.0f, 1.0f };
+	int i;
+	RwUInt32 c;
+	int w, h;
+
+	w = 256;
+	h = 128;
+
+	// TODO: tex coords correct?
+	makequad(cam, ms_radiosityVerts, 256, 128);
+	makequad(cam, ms_radiosityVerts+4, RwCameraGetRaster(cam)->width, RwCameraGetRaster(cam)->height);
+
+	// black vertices; at 8
+	for(i = 0; i < 4; i++){
+		ms_radiosityVerts[i+8] = ms_radiosityVerts[i];
+		ms_radiosityVerts[i+8].emissiveColor = 0;
+	}
+
+	// two sets blur vertices; at 12
+	c = D3DCOLOR_ARGB(0xFF, 36, 36, 36);
+	for(i = 0; i < 2*4*4; i++){
+		ms_radiosityVerts[i+12] = ms_radiosityVerts[i%4];
+		ms_radiosityVerts[i+12].emissiveColor = c;
+		switch(i%4){
+		case 0:
+			ms_radiosityVerts[i+12].u = (uOffsets[i/4] + 0.5f) / w;
+			ms_radiosityVerts[i+12].v = (vOffsets[i/4] + 0.5f) / h;
+			break;
+		case 1:
+			ms_radiosityVerts[i+12].u = (uOffsets[i/4] + 0.5f) / w;
+			ms_radiosityVerts[i+12].v = (h + vOffsets[i/4] + 0.5f) / h;
+			break;
+		case 2:
+			ms_radiosityVerts[i+12].u = (w + uOffsets[i/4] + 0.5f) / w;
+			ms_radiosityVerts[i+12].v = (vOffsets[i/4] + 0.5f) / h;
+			break;
+		case 3:
+			ms_radiosityVerts[i+12].u = (w + uOffsets[i/4] + 0.5f) / w;
+			ms_radiosityVerts[i+12].v = (h + vOffsets[i/4] + 0.5f) / h;
+			break;
+		}
+	}
+}
+
+void
+CMBlur2::RadiosityRender(RwCamera *cam, int limit, int intensity)
+{
+	int i;
+	RwRaster *fb;
+	RwRaster *fb1, *fb2, *tmp;
+
+	if(ms_pRadiosityRaster1 == NULL || ms_pRadiosityRaster2 == NULL)
+		RadiosityInit(cam);
+
+	fb = RwCameraGetRaster(cam);
+	assert(ms_pRadiosityRaster1);
+	assert(ms_pRadiosityRaster1);
+
+	RwRect r;
+	r.x = 0;
+	r.y = 0;
+	r.w = 256;
+	r.h = 128;
+
+//	RwRasterPushContext(ms_pRadiosityRaster2);
+//	RwRasterRenderScaled(fb, &r);
+////	RwRasterRenderFast(fb, 0, 0);
+//	RwRasterPopContext();
+
+	RwD3D9SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
+
+	RadiosityCreateImmediateData(cam);
+
+
+	// Have to jump through extra hoops to downsample because RwRasterRender* doesn't seem to work
+	static RwIm2DVertex tmpverts[4];
+	makequad(cam, tmpverts, RwCameraGetRaster(cam)->width, RwCameraGetRaster(cam)->height,
+		RwRasterGetWidth(pBackBuffer), RwRasterGetHeight(pBackBuffer));
+	RwIm2DVertexSetScreenX(&tmpverts[0], 0);
+	RwIm2DVertexSetScreenY(&tmpverts[0], 0);
+	RwIm2DVertexSetScreenX(&tmpverts[1], 0);
+	RwIm2DVertexSetScreenY(&tmpverts[1], 128);
+	RwIm2DVertexSetScreenX(&tmpverts[2], 256);
+	RwIm2DVertexSetScreenY(&tmpverts[2], 0);
+	RwIm2DVertexSetScreenX(&tmpverts[3], 256);
+	RwIm2DVertexSetScreenY(&tmpverts[3], 128);
+
+	RwCameraEndUpdate(cam);
+	RwCameraSetRaster(cam, ms_pRadiosityRaster2);
+	RwCameraBeginUpdate(cam);
+
+	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)0);
+	RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERLINEAR);
+	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, pBackBuffer);
+	RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, tmpverts, 4, ms_radiosityIndices, 6);
+
+
+	for(i = 0; i < 4; i++)
+		ms_radiosityVerts[i].emissiveColor = D3DCOLOR_ARGB(limit/2, 255, 255, 255);
+
+	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, NULL);
+	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)1);
+	RwD3D9SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_REVSUBTRACT);
+	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
+	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDONE);
+	RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, ms_radiosityVerts, 4, ms_radiosityIndices, 6);
+	RwD3D9SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
+
+	fb1 = ms_pRadiosityRaster1;
+	fb2 = ms_pRadiosityRaster2;
+	for(i = 0; i < 3; i++){
+		RwCameraEndUpdate(cam);
+		RwCameraSetRaster(cam, fb1);
+		RwCameraBeginUpdate(cam);
+
+		RwRenderStateSet(rwRENDERSTATETEXTURERASTER, NULL);
+		RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)0);
+		RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, ms_radiosityVerts+8, 4, ms_radiosityIndices, 6);
+
+		RwRenderStateSet(rwRENDERSTATETEXTURERASTER, fb2);
+		RwRenderStateSet(rwRENDERSTATETEXTUREADDRESSU, (void*)rwTEXTUREADDRESSCLAMP);
+		RwRenderStateSet(rwRENDERSTATETEXTUREADDRESSV, (void*)rwTEXTUREADDRESSCLAMP);
+		RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)1);
+		RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
+		RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDONE);
+		if((i % 2) == 0)
+			RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, ms_radiosityVerts+12, 4*4, ms_radiosityIndices, 6*7);
+		else
+			RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, ms_radiosityVerts+28, 4*4, ms_radiosityIndices, 6*7);
+
+		tmp = fb1;
+		fb1 = fb2;
+		fb2 = tmp;
+	}
+
+	RwCameraEndUpdate(cam);
+	RwCameraSetRaster(cam, fb);
+	RwCameraBeginUpdate(cam);
+
+	for(i = 4; i < 8; i++)
+		ms_radiosityVerts[i].emissiveColor = D3DCOLOR_ARGB(intensity*4, 255, 255, 255);
+
+	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, fb2);
+	RwRenderStateSet(rwRENDERSTATETEXTUREADDRESSU, (void*)rwTEXTUREADDRESSCLAMP);
+	RwRenderStateSet(rwRENDERSTATETEXTUREADDRESSV, (void*)rwTEXTUREADDRESSCLAMP);
+	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)1);
+	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
+	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDONE);
+	for(i = 0; i < 3; i++)
+		RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, ms_radiosityVerts+4, 4, ms_radiosityIndices, 6);
+
+	RwD3D9SetRenderState(D3DRS_ALPHATESTENABLE, TRUE);
+}
+
+void
+CMBlur2::MotionBlurRender_leeds(RwCamera *cam, uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha, uint8_t type/*, uint8 mbluralpha*/)
+{
+	RwRGBA col;
+	if(BlurOn){
+		col.red = red;
+		col.green = green;
+		col.blue = blue;
+		col.alpha = alpha;
+
+		if(pBackBuffer == NULL ||
+		   RwRasterGetWidth(pBackBuffer) != RwRasterGetWidth(pFrontBuffer) ||
+		   RwRasterGetHeight(pBackBuffer) != RwRasterGetHeight(pFrontBuffer))
+			Initialise();
+
+		RwRasterPushContext(pBackBuffer);
+		RwRasterRenderFast(cam->frameBuffer, 0, 0);
+		RwRasterPopContext();
+
+		//if(config.radiosity < 0) config.radiosity = 0;
+		//if(config.radiosity)
+			RadiosityRender(cam, 3, 3);
+
+		RwRasterPushContext(pBackBuffer);
+		RwRasterRenderFast(cam->frameBuffer, 0, 0);
+		RwRasterPopContext();
+
+		OverlayRender_leeds(cam, pFrontBuffer, &col, type);
+
+		RwRasterPushContext(pFrontBuffer);
+		RwRasterRenderFast(cam->frameBuffer, 0, 0);
+		RwRasterPopContext();
+	}
+}
+
+void
+CMBlur2::MotionBlurRender_mobile(RwCamera *cam, uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha, uint8_t type)
+{
+	int bufw, bufh;
+	int screenw, screenh;
+
+	//if(!BlurOn || !RwD3D9Supported())
+	//	return;
+
+	if(pBackBuffer == NULL ||
+	   RwRasterGetWidth(pBackBuffer) != RwRasterGetWidth(pFrontBuffer) ||
+	   RwRasterGetHeight(pBackBuffer) != RwRasterGetHeight(pFrontBuffer))
+		Initialise();
+
+	RwRasterPushContext(pBackBuffer);
+	RwRasterRenderFast(cam->frameBuffer, 0, 0);
+	RwRasterPopContext();
+
+
+
+	bufw = RwRasterGetWidth(pBackBuffer);
+	bufh = RwRasterGetHeight(pBackBuffer);
+	screenw = RwCameraGetRaster(cam)->width;
+	screenh = RwCameraGetRaster(cam)->height;
+
+	makequad(cam, screen_vertices, screenw, screenh, bufw, bufh);
+
+	float mult[3], add[3];
+		mult[0] = (red-64)/256.0f + 1.4f;
+		mult[1] = (green-64)/256.0f + 1.4f;
+		mult[2] = (blue-64)/256.0f + 1.4f;
+		add[0] = red/1536.f - 0.05f;
+		add[1] = green/1536.f - 0.05f;
+		add[2] = blue/1536.f - 0.05f;
+	
+	//RwD3D9SetPixelShaderConstant(3, &mult, 1);
+	//RwD3D9SetPixelShaderConstant(4, &add, 1);
+
+	//RwD3D9SetIm2DPixelShader(contrastPS);
+
+	DefinedState();
+	RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERNEAREST);
+	RwRenderStateSet(rwRENDERSTATEFOGENABLE, FALSE);
+	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, FALSE);
+	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, FALSE);
+	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, FALSE);
+	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, pBackBuffer);
+	RwRenderStateSet(rwRENDERSTATETEXTUREADDRESSU, (void*)rwTEXTUREADDRESSCLAMP);
+	RwRenderStateSet(rwRENDERSTATETEXTUREADDRESSV, (void*)rwTEXTUREADDRESSCLAMP);
+
+	RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, screen_vertices, 4, screen_indices, 6);
+
+	//RwD3D9SetIm2DPixelShader(nil);
+}

@@ -16,15 +16,12 @@
 #include "CTxdStore.h"
 #include "CScene.h"
 #include "MBlurSA.h"
-#include "M:\My Projects\VCMarkersSA\VCMarkersSA\MemoryMgr.h"
+#include "MemoryMgr.h"
 #include "Utility.h"
 #include "plugin.h"
 #include "CHud.h"
 #include "Fx_c.h"
 #include "CParticleVC.h"
-WRAPPER void ImmediateModeRenderStatesStore(void) { EAXJMP(0x700CC0); }
-WRAPPER void ImmediateModeRenderStatesSet(void) { EAXJMP(0x700D70); }
-WRAPPER void ImmediateModeRenderStatesReStore(void) { EAXJMP(0x700E00); }
 //#define LIBRW
 //#define GTA_PS2
 using namespace plugin;

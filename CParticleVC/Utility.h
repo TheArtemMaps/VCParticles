@@ -12,6 +12,8 @@
 #include <game_sa/CGeneral.h>
 #include "plugin.h"
 #include <CStreaming.h>
+#include "CClouds.h"
+#include "MemoryMgr.h"
 using namespace plugin;
 #define PERCENT(x, p)                    ((float(x) * (float(p) / 100.0f)))
 #define ARRAY_SIZE(array)                (sizeof(array) / sizeof(array[0]))
@@ -21,6 +23,7 @@ using namespace plugin;
 #define TWOPI (PI*2)
 #define FIX_BUGS // Undefine to play with bugs
 #define GTAVC_JP_PATCH
+//#define GTA_SCENE_EDIT
 #define RpAtomicGetFrameMacro(_atomic)                                  \
     ((RwFrame *) rwObjectGetParent(_atomic))
 #define RpAtomicGetFrame(_atomic) \
@@ -101,6 +104,8 @@ inline float Pow(float x, float y) { return powf(x, y); }
 #define SCREEN_SCALE_FROM_BOTTOM(a) (SCREEN_HEIGHT - SCREEN_SCALE_Y(a))
 #define SCREEN_STRETCH_FROM_RIGHT(a)  (SCREEN_WIDTH - SCREEN_STRETCH_X(a))
 #define SCREEN_STRETCH_FROM_BOTTOM(a) (SCREEN_HEIGHT - SCREEN_STRETCH_Y(a))
+#define RwV3dAssign(_target, _source)                     \
+    ( *(_target) = *(_source) )
 extern uint8_t work_buff[55000];
 static bool IsModelLoaded(int32_t model) { return CStreaming::ms_aInfoForModel[model].m_nLoadState == eStreamingLoadState::LOADSTATE_LOADED; }
 enum CarPiece {
@@ -303,6 +308,10 @@ template<typename T, uintptr_t Addr>
 T& StaticRef() {
     return StaticRef<T>(Addr);
 }
+class Clouds : public CClouds {
+public:
+    static void MovingFogRender();
+};
 class FireAudio : public CAEFireAudioEntity {
 public:
     void AddAudioEvent(eAudioEvents audioevent, CVector* pos);
@@ -356,6 +365,15 @@ enum
     ROTOR_LEFT = 7,
     ROTOR_BACK = 8,
     ROTOR_BOTTOM = 9,
+};
+enum {
+    MODELINFOSIZE = 6700
+};
+void
+AsciiToUnicode(const char* src, char* dst);
+class Cam : public CCam {
+public:
+    void Process_Editor(const CVector&, float, float, float);
 };
 class Firev : public CFire {
 public:

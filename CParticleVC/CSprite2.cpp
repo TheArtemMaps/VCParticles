@@ -2,6 +2,8 @@
 #include "CSprite2.h"
 #include <game_sa/CDraw.h>
 #include <game_sa/CScene.h>
+#include <game_sa/CCamera.h>
+#include "Utility.h"
 using namespace plugin;
 float CSprite2::m_f2DNearScreenZ;
 float CSprite2::m_f2DFarScreenZ;
@@ -78,8 +80,8 @@ CSprite2::RenderBufferedOneXLUSprite_Rotate_Dimension(float x, float y, float z,
 void
 CSprite2::RenderOneXLUSprite_Rotate_Aspect(float x, float y, float z, float w, float h, uint8_t r, uint8_t g, uint8_t b, int16_t intens, float recipz, float rotation, uint8_t a)
 {
-	float c = cos(rotation);
-	float s = sin(rotation);
+	float c = cosf(rotation);
+	float s = sinf(rotation);
 
 	float xs[4];
 	float ys[4];
@@ -288,8 +290,8 @@ CSprite2::RenderBufferedOneXLUSprite2D_Rotate_Dimension(float x, float y, float 
 {
 	m_bFlushSpriteBufferSwitchZTest = 1;
 	CRGBA col(intens * colour.red >> 8, intens * colour.green >> 8, intens * colour.blue >> 8, alpha);
-	float c = cos(DEGTORAD(rotation));
-	float s = sin(DEGTORAD(rotation));
+	float c = cosf(DEGTORAD(rotation));
+	float s = sinf(DEGTORAD(rotation));
 
 	Set6Vertices2D(&SpriteBufferVerts[6 * nSpriteBufferIndex],
 		x + c * w - s * h,
@@ -372,8 +374,8 @@ void
 CSprite2::RenderBufferedOneXLUSprite_Rotate_Aspect(float x, float y, float z, float w, float h, uint8_t r, uint8_t g, uint8_t b, int16_t intens, float recipz, float rotation, uint8_t a)
 {
 	m_bFlushSpriteBufferSwitchZTest = 0;
-	float c = cos(rotation);
-	float s = sin(rotation);
+	float c = cosf(rotation);
+	float s = sinf(rotation);
 
 	float xs[4];
 	float ys[4];
@@ -434,8 +436,8 @@ void
 CSprite2::RenderBufferedOneXLUSprite_Rotate_2Colours(float x, float y, float z, float w, float h, uint8_t r1, uint8_t g1, uint8_t b1, uint8_t r2, uint8_t g2, uint8_t b2, float cx, float cy, float recipz, float rotation, uint8_t a)
 {
 	m_bFlushSpriteBufferSwitchZTest = 0;
-	float c = cos(rotation);
-	float s = sin(rotation);
+	float c = cosf(rotation);
+	float s = sinf(rotation);
 
 	float xs[4];
 	float ys[4];

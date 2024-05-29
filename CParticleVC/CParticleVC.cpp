@@ -87,7 +87,7 @@ bool ExhaustSmoke = true;
 bool dmgParticles = true;
 bool SandStorm = true;
 bool Gunshells = true;
-bool FrictionParticles = true;
+//bool FrictionParticles = true; // Obsolete
 bool ShipsOnHorizon = true;
 bool SeaBirds = true;
 bool RainOnRoofParticles = true;
@@ -122,6 +122,7 @@ bool WaterDrops = true;
 bool BloodDrops = true;
 bool ExplosionsFlash = true;
 bool SteamDuringRain = true, SteamAfterRain = true;
+bool DieselVehiclesBlackSmoke = true;
 int SnowFlakes = 1;
 enum {
     NUM_RAIN_STREAKS = 35
@@ -589,6 +590,27 @@ StdcallEvent <AddressList<0x59E1DB, H_CALL, 0x61D1A9, H_CALL/*, 0x6DEB5A, H_CALL
         float, 
         float)> AddSparksEvent;
 
+StdcallEvent <AddressList<0x545953, H_CALL>, PRIORITY_AFTER, ArgPick10N <RwV3d*, 0,
+    RwV3d*, 1,
+    float, 2,
+    signed int, 3,
+    float, 4,
+    float, 5,
+    float, 6,
+    int, 7,
+    float, 8,
+    float, 9 >,
+    void(RwV3d*,
+        RwV3d*,
+        float,
+        signed int,
+        float,
+        float,
+        float,
+        int,
+        float,
+        float)> FrictionSparksEvent;
+
 ThiscallEvent <AddressList <0x6C5135, H_CALL>, PRIORITY_AFTER, ArgPick6N<CVehicle*, 0,
     CVector, 1,
     CMatrix*, 2,
@@ -899,7 +921,7 @@ void CParticle::ReloadConfig()
     SandStorm = ini.ReadBoolean("VISUAL", "Sandstorm", true);
     dmgParticles = ini.ReadBoolean("VISUAL", "Damage particles", true);
     ExhaustSmoke = ini.ReadBoolean("VISUAL", "Exhaust smoke", true);
-    FrictionParticles = ini.ReadBoolean("VISUAL", "Friction particles", true);
+   // FrictionParticles = ini.ReadBoolean("VISUAL", "Friction particles", true); // Obsolete
     RainOnRoofParticles = ini.ReadBoolean("VISUAL", "Rain on roof particles", true);
     ShipsOnHorizon = ini.ReadBoolean("VISUAL", "Ships on horizon", true);
     SeaBirds = ini.ReadBoolean("VISUAL", "Sea birds", true);
@@ -933,6 +955,7 @@ void CParticle::ReloadConfig()
     ExplosionsFlash = ini.ReadBoolean("VISUAL", "Explosions flash", true);
     SteamDuringRain = ini.ReadBoolean("VISUAL", "Steam during rain", true);
     SteamAfterRain = ini.ReadBoolean("VISUAL", "Steam after rain", true);
+    DieselVehiclesBlackSmoke = ini.ReadBoolean("VISUAL", "Diesel vehicles black exhaust smoke", true);
     SnowFlakes = ini.ReadInteger("VISUAL", "Max snow flakes", 1);
     nParticleCreationInterval = ini.ReadInteger("MISC", "Particles creation interval", 1);
     PARTICLE_WIND_TEST_SCALE = ini.ReadFloat("MISC", "PARTICLE_WIND_TEST_SCALE", 0.002f);
@@ -5360,6 +5383,7 @@ void Veh::AddExhaustParticles() {
             else {
                 size = 0.0f;
             }
+
             CParticle::AddParticle(parttype, firstExhaustPos, dir1, nullptr, size, 0, -1.0, 0, fLife);
         }
         else if (bHasDoubleExhaust) {
@@ -5373,155 +5397,29 @@ void Veh::AddExhaustParticles() {
             else {
                 size = 0.0f;
             }
+
             CParticle::AddParticle(parttype, secondExhaustPos, dir1, nullptr, size, 0, -1.0, 0, fLife);
         }
     }
-}
-bool
-Physical::ApplyFriction(float fFriction, CColPoint& colpoint)
-{
-    // VC Code
-   /* CVector speed;
-    float normalSpeed;
-    CVector vOtherSpeed;
-    float fOtherSpeed;
-    CVector frictionDir;
-    float fImpulse;
-    float impulseLimit;
 
-    if (m_nPhysicalFlags.bDisableTurnForce) {
-        normalSpeed = DotProduct(m_vecMoveSpeed, colpoint.m_vecNormal);
-        vOtherSpeed = m_vecMoveSpeed - colpoint.m_vecNormal * normalSpeed;
+    static int previousGear = 0;
 
-        fOtherSpeed = vOtherSpeed.Magnitude();
-        if (fOtherSpeed > 0.0f) {
-#ifdef FIX_BUGS // division by 0 (wtf rockstar)
-            frictionDir = vOtherSpeed;
-            frictionDir.Normalise();
-#else
-            frictionDir = vOtherSpeed * (1.0f / fOtherSpeed);
-#endif
-            // not really impulse but speed
-            // maybe use ApplyFrictionMoveForce instead?
-            fImpulse = -fOtherSpeed;
-            impulseLimit = fFriction * CTimer::ms_fTimeStep / m_fMass;
-            if (fImpulse < -impulseLimit) fImpulse = -impulseLimit;
-            CVector vImpulse = frictionDir * fImpulse;
-            m_vecFrictionMoveSpeed += CVector(vImpulse.x, vImpulse.y, 0.0f);
-            return true;
-        }
-    }
-    else {
-        CVector pointpos = colpoint.m_vecPoint - GetPosition();
-        speed = GetSpeed(pointpos);
-        normalSpeed = DotProduct(speed, colpoint.m_vecNormal);
-        vOtherSpeed = speed - colpoint.m_vecNormal * normalSpeed;
-
-        fOtherSpeed = vOtherSpeed.Magnitude();
-        if (fOtherSpeed > 0.0f) {
-#ifdef FIX_BUGS // division by 0 (rockstar are dumb)
-            frictionDir = vOtherSpeed;
-            frictionDir.Normalise();
-#else
-            frictionDir = vOtherSpeed * (1.0f / fOtherSpeed);
-#endif
-            fImpulse = -fOtherSpeed * m_fMass;
-            impulseLimit = fFriction * CTimer::ms_fTimeStep * 1.5;
-            if (fImpulse < -impulseLimit) fImpulse = -impulseLimit;
-            ApplyFrictionMoveForce(frictionDir * fImpulse);
-            ApplyFrictionTurnForce(frictionDir * fImpulse, pointpos);
-
-            if (fOtherSpeed > 0.1f &&
-                colpoint.m_nSurfaceTypeB != SURFACE_GRASS_LONG_DRY && colpoint.m_nSurfaceTypeB != SURFACE_MUD_DRY) {
-                CVector v = frictionDir * fOtherSpeed * 0.25f;
-                for (int i = 0; i < 4; i++)
-                    CParticle::AddParticle(PARTICLE_SPARK_SMALL, colpoint.m_vecPoint, v);
+    if (m_pHandlingData->m_transmissionData.m_nEngineType == 'D' && m_fGasPedal > 0.3f && DieselVehiclesBlackSmoke) {
+        // If the current gear is greater than previous gear
+        if (m_nCurrentGear > previousGear && m_nCurrentGear <= 5) {
+            // Add diesel particles!
+            CParticle::AddParticle(PARTICLE_ENGINE_SMOKE, firstExhaustPos, dir1, nullptr, 0.01f, 0, -1.0, 0, fLife);
+            // If the vehicle has a second exhaust, add smoke for it too!
+            if (bHasDoubleExhaust) {
+                CParticle::AddParticle(PARTICLE_ENGINE_SMOKE, secondExhaustPos, dir1, nullptr, 0.01f, 0, -1.0, 0, fLife);
             }
-            return true;
         }
+
+        // Update the variable
+        previousGear = m_nCurrentGear;
     }
-    return false;
-}*/
-// SA Code
-    if (m_nPhysicalFlags.bDisableCollisionForce)
-    {
-        return false;
-    }
-
-    if (m_nPhysicalFlags.bDisableTurnForce)
-    {
-        float fMoveSpeedDotProduct = DotProduct(m_vecMoveSpeed, colpoint.m_vecNormal);
-        CVector vecSpeedDifference = m_vecMoveSpeed - (fMoveSpeedDotProduct * colpoint.m_vecNormal);
-        float fMoveSpeedMagnitude = vecSpeedDifference.Magnitude();
-        if (fMoveSpeedMagnitude > 0.0f)
-        {
-            CVector vecMoveDirection = vecSpeedDifference / fMoveSpeedMagnitude;
-
-            float fSpeed = -fMoveSpeedMagnitude;
-            float fForce = -(CTimer::ms_fTimeStep / m_fMass * fFriction);
-            if (fSpeed < fForce)
-            {
-                fSpeed = fForce;
-            }
-
-            m_vecFrictionMoveSpeed.x += vecMoveDirection.x * fSpeed;
-            m_vecFrictionMoveSpeed.y += vecMoveDirection.y * fSpeed;
-            return true;
-        }
-        return false;
-    }
-
-    CVector vecDistanceToPointFromThis = colpoint.m_vecPoint - GetPosition();
-    CVector vecSpeed = GetSpeed(vecDistanceToPointFromThis);
-
-    float fMoveSpeedDotProduct = DotProduct(vecSpeed, colpoint.m_vecNormal);
-    CVector vecSpeedDifference = vecSpeed - (fMoveSpeedDotProduct * colpoint.m_vecNormal);
-
-    float fMoveSpeedMagnitude = vecSpeedDifference.Magnitude();
-    if (fMoveSpeedMagnitude <= 0.0f)
-    {
-        return false;
-    }
-
-    CVector vecMoveDirection = vecSpeedDifference / fMoveSpeedMagnitude;
-
-    CVector vecCentreOfMassMultiplied = reinterpret_cast<Matrix*>(GetMatrix())->TransformVector(m_vecCentreOfMass);
-    CVector vecDifference = vecDistanceToPointFromThis - vecCentreOfMassMultiplied;
-    CVector vecSpeedCrossProduct = CrossProduct(vecDifference, vecMoveDirection);
-    float squaredMagnitude = static_cast<Vec>(vecSpeedCrossProduct).MagnitudeSqr();
-    float fCollisionMass = -(1.0f / (squaredMagnitude / m_fTurnMass + 1.0f / m_fMass) * fMoveSpeedMagnitude);
-    float fNegativeFriction = -fFriction;
-    if (fCollisionMass < fNegativeFriction)
-    {
-        fCollisionMass = fNegativeFriction;
-    }
-
-    ApplyFrictionForce(vecMoveDirection * fCollisionMass, vecDistanceToPointFromThis);
-
-
-    if (fMoveSpeedMagnitude > 0.1f
-        && colpoint.m_nSurfaceTypeB != SURFACE_GRASS_MEDIUM_DRY && colpoint.m_nSurfaceTypeB != SURFACE_MUD_DRY
-        || fabs(DotProduct(colpoint.m_vecNormal, GetRight())) >= 0.86669999f)
-    {
-
-        CVector across = vecMoveDirection * (fMoveSpeedMagnitude * 0.25f);
-        CVector direction = vecMoveDirection + (colpoint.m_vecNormal * 0.1f);
-        CVector vecSpeedCrossProduct = CrossProduct(colpoint.m_vecNormal, m_vecMoveSpeed);
-        vecSpeedCrossProduct.Normalise();
-
-        for (int32_t i = 0; i < 4; i++)
-        {
-            float fRandom = CGeneral::GetRandomNumberInRange(-0.2f, 0.2f);
-            CVector origin = colpoint.m_vecPoint + (vecSpeedCrossProduct * fRandom);
-            float force = fMoveSpeedMagnitude * 12.5f;
-            CVector v = vecMoveDirection * fCollisionMass * 0.25f;
-            v /= 1.5f;
-            CParticle::AddParticle(PARTICLE_SPARK_SMALL, colpoint.m_vecPoint, v);
-            //g_fx.AddSparks(origin, direction, force, 1, across, SPARK_PARTICLE_SPARK2, 0.1f, 1.0f);
-        }
-    }
-    return true;
 }
+
 
 void Veh::DoBoatSplashes(float Damping) {
     // Splashes
@@ -6858,10 +6756,10 @@ public:
             if (ExhaustSmoke) {
                 Memory::InjectHook(0x6DE240, &Veh::AddExhaustParticles, PATCH_JUMP);
             }
-            // Replace friction sparks (I know it's bad to replace the whole function, just for one minor thing, sorry)
-            if (FrictionParticles) {
-                Memory::InjectHook(0x5454C0, &Physical::ApplyFriction, PATCH_JUMP);
-            }
+            // Replace friction sparks (I know it's bad to replace the whole function, just for one minor thing, sorry) NO LONGER NEEDED SINCE SPARKS ARE CREATED EVERYWHERE THEY CALLED
+           // if (FrictionParticles) {
+            //    Memory::InjectHook(0x5454C0, &Physical::ApplyFriction, PATCH_JUMP);
+           // }
             // Replace dirt/water and other wheel particles
             // Memory::InjectHook(0x6D2D50, &Auto::AddWheelDirtAndWater, PATCH_JUMP);
             // Replace rain splash particles
@@ -6907,6 +6805,7 @@ public:
             }
             else
             {
+                log("IMFX = false\n");
                 IMFX = false;
             }
             if (!IMFX && MuzzleFlashnSmoke) {
@@ -7451,8 +7350,7 @@ public:
                               nullptr, 0.0f, 0, 0, GetRandomNumber() & 1);
                   }
               }*/
-
-            if (veh->m_fHealth < 250.0f && veh->m_nStatus != STATUS_WRECKED && FireWhenAboutToExplode) {
+            if (veh->m_fHealth < 250.0f && veh->m_nStatus != STATUS_WRECKED && FireWhenAboutToExplode && (!veh->m_nPhysicalFlags.bTouchingWater || !veh->m_nPhysicalFlags.bSubmergedInWater)) {
                 CVector damagePos = ((CVehicleModelInfo*)CModelInfo::GetModelInfo(veh->m_nModelIndex))->m_pVehicleStruct->m_avDummyPos[7];
                 damagePos = *veh->GetMatrix() * damagePos;
                 damagePos.z += 0.15f;
@@ -8118,8 +8016,19 @@ public:
                             CParticle::AddParticle(PARTICLE_SPARK_SMALL, (CVector&)*position, CVector(0.0f, 0.0f, 0.10f));
                             CParticle::AddParticle(PARTICLE_SPARK, (CVector&)*position, CVector(0.0f, 0.0f, 0.10f));
                         }
-                    
                 }
+        };
+        FrictionSparksEvent += [](RwV3d* position,
+            RwV3d* plsdontletthismodflop,
+            float force,
+            signed int count,
+            float acrossX,
+            float acrossY,
+            float acrossZ,
+            int blurIf0,
+            float spread,
+            float life) {
+           CParticle::AddParticle(PARTICLE_SPARK_SMALL, (CVector&)*position, CVector(0.0f, 0.0f, 0.0f));
         };
 
         PlanenHeliBlowUpEvent += [](CEntity* newVictim,

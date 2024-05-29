@@ -88,6 +88,10 @@ MACRO_STOP
 #define RpClumpGetFrame(_clump) \
     RpClumpGetFrameMacro(_clump)
 inline float Pow(float x, float y) { return powf(x, y); }
+#define RwCameraGetViewWindow(_camera)                     \
+    (&((_camera)->viewWindow))
+#define RwCameraGetFarClipPlane(_camera)                   \
+    ((_camera)->farPlane)
 #define IMPROVED_TECH_PART
 #define HALFPX (0.5f)
 #define HALFPI (PI/2)
@@ -106,6 +110,10 @@ inline float Pow(float x, float y) { return powf(x, y); }
 #define SCREEN_STRETCH_FROM_BOTTOM(a) (SCREEN_HEIGHT - SCREEN_STRETCH_Y(a))
 #define RwV3dAssign(_target, _source)                     \
     ( *(_target) = *(_source) )
+#define DROPLETS_LEFT_OFFSET (10.0f)
+#define DROPLETS_RIGHT_OFFSET (10.0f)
+#define DROPLETS_TOP_OFFSET (10.0f)
+#define DROPLETS_BOTTOM_OFFSET (10.0f)
 extern uint8_t work_buff[55000];
 static bool IsModelLoaded(int32_t model) { return CStreaming::ms_aInfoForModel[model].m_nLoadState == eStreamingLoadState::LOADSTATE_LOADED; }
 enum CarPiece {

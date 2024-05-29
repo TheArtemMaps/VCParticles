@@ -259,7 +259,6 @@ void AddParticleObjectOpcode(CScriptThread* thread) {
     RwUInt8 a = CLEO_GetIntOpcodeParam(thread);
     int durationInMs = CLEO_GetIntOpcodeParam(thread);
     bool remove = CLEO_GetIntOpcodeParam(thread);
-
     AddParticleObject(typeStr2, x, y, z, strengthX, strengthY, strengthZ, scale, r, g, b, a, durationInMs, remove);
 }
 

@@ -115,7 +115,7 @@ bool FootDustParticles = true;
 bool FootSplashesParticles = true;
 bool RiotExplosions = true;
 bool PoliceBoatGunParticles = true;
-bool FireOnHermes = true;
+bool FireOnExhaust = true;
 bool TearGasSmoke = true;
 bool WoodImpactParticles = true;
 bool WaterDrops = true;
@@ -124,6 +124,7 @@ bool ExplosionsFlash = true;
 bool SteamDuringRain = true, SteamAfterRain = true;
 bool DieselVehiclesBlackSmoke = true;
 int SnowFlakes = 1;
+int ModelIndex = MODEL_HERMES;
 enum {
     NUM_RAIN_STREAKS = 35
 };
@@ -947,7 +948,7 @@ void CParticle::ReloadConfig()
     FootSplashesParticles = ini.ReadBoolean("VISUAL", "Foot splashes particles", true);
     RiotExplosions = ini.ReadBoolean("VISUAL", "Riot explosions", false);
     PoliceBoatGunParticles = ini.ReadBoolean("VISUAL", "Police boat gun particles", true);
-    FireOnHermes = ini.ReadBoolean("VISUAL", "Fire on Hermes", true);
+    FireOnExhaust = ini.ReadBoolean("VISUAL", "Fire on exhaust", true);
     TearGasSmoke = ini.ReadBoolean("VISUAL", "Tear gas smoke particles", true);
     WoodImpactParticles = ini.ReadBoolean("VISUAL", "Wood impact particles", true);
     WaterDrops = ini.ReadBoolean("VISUAL", "Water drops", true);
@@ -956,10 +957,11 @@ void CParticle::ReloadConfig()
     SteamDuringRain = ini.ReadBoolean("VISUAL", "Steam during rain", true);
     SteamAfterRain = ini.ReadBoolean("VISUAL", "Steam after rain", true);
     DieselVehiclesBlackSmoke = ini.ReadBoolean("VISUAL", "Diesel vehicles black exhaust smoke", true);
-    SnowFlakes = ini.ReadInteger("VISUAL", "Max snow flakes", 1);
     nParticleCreationInterval = ini.ReadInteger("MISC", "Particles creation interval", 1);
     PARTICLE_WIND_TEST_SCALE = ini.ReadFloat("MISC", "PARTICLE_WIND_TEST_SCALE", 0.002f);
     fParticleScaleLimit = ini.ReadFloat("MISC", "Particles scale limit", 0.5f);
+    ModelIndex = ini.ReadInteger("MISC", "Exhaust fire model index", MODEL_HERMES);
+    SnowFlakes = ini.ReadInteger("MISC", "Max snow flakes", 1);
     /*for (int32_t i = 0; i < MAX_PARTICLES_INI; i++)
     {
         auto ParticleSystem = &mod_ParticleSystemManager.m_aParticles[MAX_PARTICLES_INI];
@@ -4389,7 +4391,7 @@ void AddRain()
         dir.x = 0.0f;
         dir.y = CGeneral::GetRandomNumberInRange(30.0f, 40.0f);
         dir.z = 0.0f;
-        CParticle::AddParticle(PARTICLE_RAINDROP_2D, pos, dir, nullptr, CGeneral::GetRandomNumberInRange(0.1f, 0.75f), 0, 0, (int)CWeather::Rain & 3, 0);
+        CParticle::AddParticle(PARTICLE_RAINDROP_2D, pos, dir, nullptr, CGeneral::GetRandomNumberInRange(0.1f, 0.75f));
 
         pos.x = CGeneral::GetRandomNumberInRange(0, (int)SCREEN_WIDTH);
         pos.y = CGeneral::GetRandomNumberInRange((int)SCREEN_HEIGHT / 5, (int)SCREEN_HEIGHT / 2);
@@ -4397,7 +4399,7 @@ void AddRain()
         dir.x = 0.0f;
         dir.y = CGeneral::GetRandomNumberInRange(30.0f, 40.0f);
         dir.z = 0.0f;
-        CParticle::AddParticle(PARTICLE_RAINDROP_2D, pos, dir, nullptr, CGeneral::GetRandomNumberInRange(0.1f, 0.75f), 0, 0, (int)CWeather::Rain & 3, 0);
+        CParticle::AddParticle(PARTICLE_RAINDROP_2D, pos, dir, nullptr, CGeneral::GetRandomNumberInRange(0.1f, 0.75f));
 
         pos.x = CGeneral::GetRandomNumberInRange(0, (int)SCREEN_WIDTH);
         pos.y = 0.0f;
@@ -4405,7 +4407,7 @@ void AddRain()
         dir.x = 0.0f;
         dir.y = CGeneral::GetRandomNumberInRange(30.0f, 40.0f);
         dir.z = 0.0f;
-        CParticle::AddParticle(PARTICLE_RAINDROP_2D, pos, dir, nullptr, CGeneral::GetRandomNumberInRange(0.1f, 0.75f), 0, 0, (int)CWeather::Rain & 3, 0);
+        CParticle::AddParticle(PARTICLE_RAINDROP_2D, pos, dir, nullptr, CGeneral::GetRandomNumberInRange(0.1f, 0.75f));
 
         float dist = CGeneral::GetRandomNumberInRange(0.0f, max(10.0f * CWeather::Rain, 40.0f) / 2.0f);
         float angle;
@@ -5401,7 +5403,7 @@ void Veh::AddExhaustParticles() {
             CParticle::AddParticle(parttype, secondExhaustPos, dir1, nullptr, size, 0, -1.0, 0, fLife);
         }
     }
-
+    // Diesel smoke
     static int previousGear = 0;
 
     if (m_pHandlingData->m_transmissionData.m_nEngineType == 'D' && m_fGasPedal > 0.3f && DieselVehiclesBlackSmoke) {
@@ -5417,6 +5419,46 @@ void Veh::AddExhaustParticles() {
 
         // Update the variable
         previousGear = m_nCurrentGear;
+    }
+    // Fire on exhaust
+    static float fumesLimit = 2.0f;
+    if (FireOnExhaust) {
+        if (m_nVehicleFlags.bEngineOn && !(m_pHandlingData->m_bNoExhaust) && fwdSpeed < 130.0f) {
+            if (((Vec)firstExhaustPos) != CVector(0.0f, 0.0f, 0.0f) || ((Vec)secondExhaustPos) != CVector(0.0f, 0.0f, 0.0f)) {
+                if (CGeneral::GetRandomNumberInRange(1.0f, 3.0f) * (m_fGasPedal + 1.1f) > fumesLimit) {
+                    for (int i = 0; i < 4; i++) {
+                        if (m_nModelIndex == ModelIndex && i == 1 && m_fGasPedal > 0.9f) {
+                            if (m_nCurrentGear == 1 || m_nCurrentGear == 3 && (CTimer::m_snTimeInMilliseconds % 1500) > 750) {
+                                    CParticle::AddParticle(PARTICLE_FIREBALL, firstExhaustPos, dir1, NULL, 0.05f, 0, 0, 2, 200);
+                                    CParticle::AddParticle(PARTICLE_FIREBALL, firstExhaustPos, dir1, NULL, 0.05f, 0, 0, 2, 200);
+                                    if (bHasDoubleExhaust) {
+                                        CParticle::AddParticle(PARTICLE_FIREBALL, secondExhaustPos, dir1, NULL, 0.05f, 0, 0, 2, 200);
+                                        CParticle::AddParticle(PARTICLE_FIREBALL, secondExhaustPos, dir1, NULL, 0.05f, 0, 0, 2, 200);
+                                    }
+                            }
+                            if (m_nStatus == STATUS_PLAYER && (CTimer::m_FrameCounter & 3) == 0 &&
+                                CWeather::Rain == 0.0f && i == 0) {
+                                CVector camDist = GetPosition() - TheCamera.GetPosition();
+                                if (DotProduct(GetForward(), camDist) > 0.0f ||
+                                    TheCamera.GetLookDirection() == 1 ||
+                                    TheCamera.GetLookDirection() == 2) {
+                                    CParticle::AddParticle(PARTICLE_HEATHAZE, firstExhaustPos, CVector(0.0f, 0.0f, 0.0f));
+                                    if (bHasDoubleExhaust)
+                                        CParticle::AddParticle(PARTICLE_HEATHAZE, secondExhaustPos, CVector(0.0f, 0.0f, 0.0f));
+
+                                    CParticle::AddParticle(PARTICLE_HEATHAZE, firstExhaustPos, CVector(0.0f, 0.0f, 0.0f));
+                                    if (bHasDoubleExhaust)
+                                        CParticle::AddParticle(PARTICLE_HEATHAZE, secondExhaustPos, CVector(0.0f, 0.0f, 0.0f));
+                                }
+                            }
+                            else {
+                                i = 99;
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -6610,6 +6652,69 @@ void Clouds::MovingFogRender() {
     MovingFog_Update();
 }*/
 RwRGBA SmokeColor = { 0, 0, 0, 0 };
+
+
+bool initializedBASS = false;
+DWORD bassChannel = NULL;
+HSTREAM stream = 0;
+bool looped = true;
+bool trackIsPlaying = false;
+bool fileCheck(const char* name) {
+    struct stat buffer;
+    return (stat(name, &buffer) == 0);
+}
+
+bool checkChannel() {
+    return stream != 0 && bassChannel != NULL;
+}
+
+void setVolume(float volume) {
+    if (!checkChannel()) return;
+
+    BASS_ChannelSetAttribute(stream, BASS_ATTRIB_VOL, volume);
+}
+void playTrackBASS(const std::string& musicfile) {
+
+    if (musicfile == "") return;
+
+    if (!fileCheck(musicfile.c_str())) {
+        stream = 0;
+        return;
+    }
+
+    if (!initializedBASS) {
+        initializedBASS = true;
+        bassChannel = NULL;
+        BASS_Init(-1, 44100, 0, RsGlobal.ps->window, nullptr);
+    }
+
+    BASS_ChannelStop(bassChannel);
+
+    if (looped) {
+        stream = BASS_StreamCreateFile(FALSE, (musicfile).c_str(), 0, 0, BASS_SAMPLE_FLOAT | BASS_SAMPLE_LOOP);
+    }
+    else {
+        stream = BASS_StreamCreateFile(FALSE, (musicfile).c_str(), 0, 0, 0);
+    }
+
+    if (stream != 0) {
+        bassChannel = stream;
+        BASS_ChannelPlay(bassChannel, FALSE);
+        trackIsPlaying = true;
+    }
+}
+
+void SetSoundPosition(float x, float y, float z) {
+    BASS_3DVECTOR pos(x,y,z);
+    BASS_ChannelSet3DPosition(stream, &pos, NULL, NULL);
+    BASS_Apply3D();
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+float maxDistance = 100;
+float currentDistance = 5;
+
 class CParticleVC {
 public:
     CParticleVC() {
@@ -6996,7 +7101,19 @@ public:
             }
 
         };
-
+       // Events::pedRenderEvent += [](CPed* ped) {
+           // BASS_3DVECTOR pos = BASS_3DVECTOR(ped->GetPosition().x, ped->GetPosition().y, ped->GetPosition().z);
+           // BASS_Set3DPosition(&pos, &BASS_3DVECTOR(0.0f, 0.0f, 0.0f), &BASS_3DVECTOR(0.0f, 0.0f, 0.0f), &BASS_3DVECTOR(0.0f, 0.0f, 0.0f));
+           // BASS_Apply3D();
+           // if (!ped->IsPlayer() && !trackIsPlaying)
+           // playTrackBASS(PLUGIN_PATH((char*)"fireVC.wav"));
+       //     int sound = plugin::Command<0x0AC1>(PLUGIN_PATH((char*)"fireVC.wav"));;
+        //   if (sound) {
+         //      plugin::Command<0x0AC2>(sound, ped->GetPosition().x, ped->GetPosition().y, ped->GetPosition().z);
+         //      plugin::Command<0x0AAD>(sound, 1);
+          // }
+           // SetSoundPosition(ped->GetPosition().x, ped->GetPosition().y, ped->GetPosition().z);
+      //  };
         /* Events::pedRenderEvent += [](CPed* ped) {
              auto weaponState = ped->m_aWeapons[ped->m_nActiveWeaponSlot].m_nState;
              auto weaponType = ped->m_aWeapons[ped->m_nActiveWeaponSlot].m_eWeaponType;
@@ -7255,77 +7372,7 @@ public:
                 //  }
             }
             //((Veh*)veh)->DoBoatSplashes(1.0f);
-            CVector dir;
-            // Fire on Hermes
-            CVector pos1, pos2, dir1, dir2, exhaustPos;
-            exhaustPos = ((CVehicleModelInfo*)CModelInfo::GetModelInfo(veh->m_nModelIndex))->m_pVehicleStruct->m_avDummyPos[6];
-            if (fwdSpeed < 10.0f) {
-                CVector steerFwd(-sinf(veh->m_fSteerAngle), cosf(veh->m_fSteerAngle), 0.0f);
-                steerFwd = Multiply3x3(*veh->GetMatrix(), steerFwd);
-                float r = CGeneral::GetRandomNumberInRange(-0.06f, -0.03f);
-                dir1.x = steerFwd.x * r;
-                dir1.y = steerFwd.y * r;
-            }
-            else {
-                dir1.x = veh->m_vecMoveSpeed.x;
-                dir1.y = veh->m_vecMoveSpeed.y;
-            }
-            pos1 = *veh->GetMatrix() * exhaustPos;
-            if (veh->m_pHandlingData->m_bDoubleExhaust) {
-                pos2 = exhaustPos;
-                pos2.x = -pos2.x;
-                pos2 = *veh->GetMatrix() * pos2;
-                dir2 = dir1;
-            }
-            static float fumesLimit = 2.0f;
-                if (FireOnHermes) {
-                    if (veh->m_nVehicleFlags.bEngineOn && !(veh->m_pHandlingData->m_bNoExhaust) && fwdSpeed < 130.0f) {
-                        if (((Vec)exhaustPos) != CVector(0.0f, 0.0f, 0.0f)) {
-                            if (CGeneral::GetRandomNumberInRange(1.0f, 3.0f) * (veh->m_fGasPedal + 1.1f) > fumesLimit) {
-                                for (i = 0; i < 4; i++) {
-                                if (veh->m_nModelIndex == MODEL_HERMES && i == 1 && veh->m_fGasPedal > 0.9f) {
-                                    if (veh->m_nCurrentGear == 1 || veh->m_nCurrentGear == 3 && (CTimer::m_snTimeInMilliseconds % 1500) > 750) {
-                                        if (GetRandomNumber() & 1) {
-                                            CParticle::AddParticle(PARTICLE_FIREBALL, pos1, dir1, NULL, 0.05f, 0, 0, 2, 200);
-                                            CParticle::AddParticle(PARTICLE_FIREBALL, pos1, dir1, NULL, 0.05f, 0, 0, 2, 200);
-                                        }
-                                        else {
-                                            CParticle::AddParticle(PARTICLE_FIREBALL, pos2, dir2, NULL, 0.05f, 0, 0, 2, 200);
-                                            CParticle::AddParticle(PARTICLE_FIREBALL, pos2, dir2, NULL, 0.05f, 0, 0, 2, 200);
-                                        }
-                                    }
-                                    if (veh->m_nStatus == STATUS_PLAYER && (CTimer::m_FrameCounter & 3) == 0 &&
-                                        CWeather::Rain == 0.0f && i == 0) {
-                                        CVector camDist = veh->GetPosition() - TheCamera.GetPosition();
-                                        if (DotProduct(veh->GetForward(), camDist) > 0.0f ||
-                                            TheCamera.GetLookDirection() == 1 ||
-                                            TheCamera.GetLookDirection() == 2) {
-                                            CParticle::AddParticle(PARTICLE_HEATHAZE, pos1, CVector(0.0f, 0.0f, 0.0f));
-                                            if (veh->m_pHandlingData->m_bDoubleExhaust)
-                                                CParticle::AddParticle(PARTICLE_HEATHAZE, pos2, CVector(0.0f, 0.0f, 0.0f));
-
-                                            CParticle::AddParticle(PARTICLE_HEATHAZE, pos1, CVector(0.0f, 0.0f, 0.0f));
-                                            if (veh->m_pHandlingData->m_bDoubleExhaust)
-                                                CParticle::AddParticle(PARTICLE_HEATHAZE, pos2, CVector(0.0f, 0.0f, 0.0f));
-                                        }
-                                    }
-
-                                    if (veh->m_nModelIndex == MODEL_HERMES && i < 1) {
-                                        i = 1;
-                                        pos1 = *veh->GetMatrix() * CVector(1.134f, -1.276f, -0.56f);
-                                        pos2 = *veh->GetMatrix() * CVector(-1.134f, -1.276f, -0.56f);
-                                        dir1 += 0.05f * veh->GetRight();
-                                        dir2 -= 0.05f * veh->GetRight();
-                                    }
-                                    else {
-                                        i = 99;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+           
               // Rain on roof (now a separate function)
               /*if (!CCullZones::CamNoRain() && !CCullZones::PlayerNoRain() &&
                   fabsf(fwdSpeed) < 20.0f && CWeather::Rain > 0.02f) {

@@ -7712,7 +7712,7 @@ public:
                 for (int i = 0; i < CPools::ms_pPedPool->m_nSize; i++) {
                     CPed* ped = CPools::ms_pPedPool->GetAt(i);
                     if (ped) {
-                        if (!(CTimer::m_FrameCounter % 1)) {
+                        if ((CTimer::m_FrameCounter % 7) > 3) {
                             CVector bloodDir(0.0f, 0.0f, 0.0f);
                             bloodDir = 0.1f * ped->GetUp();
                             for (int i = 0; i < 4; i++) {
@@ -7776,7 +7776,7 @@ public:
                             RwRGBA(0, 0, 0, 0), 0, 0, GetRandomNumber() & 1, 0);
                         debug("BloodEvent");
                     }
-                    if (weaptype == WEAPON_KNIFE || weaptype == WEAPON_KATANA) {
+                    if (weaptype == WEAPON_KNIFE || weaptype == WEAPON_KATANA || task->m_pAnim->m_nAnimGroup == 39) {
                         for (int i = 0; i < 3; i++) {
                             CParticle::AddParticle(PARTICLE_BLOOD_SPURT, *a4, CVector(0.0f, 0.0f, 0.0f), NULL, 0.0f, 0, 0, 0, 0);
                             CParticle::AddParticle(PARTICLE_BLOOD_SPURT, *a4, CVector(0.0f, 0.0f, 0.0f), NULL, 0.0f, 0, 0, 0, 0);

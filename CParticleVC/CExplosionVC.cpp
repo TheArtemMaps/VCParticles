@@ -456,7 +456,7 @@ CExplosionVC::AddExplosion(CEntity* victim, CEntity* creator, eExplosionTypeVC t
 		break;
 	case EXPLOSION_AIRCRAFT:
 		if (!bInvisible) {
-			explosion.m_fRadius = 45.0f;
+			explosion.m_fRadius = 35.0f;
 		}
 		//explosion.m_nParticlesExpireTime = static_cast<float>(CTimer::m_snTimeInMilliseconds + lifetime + 3000);
 		CParticle::AddJetExplosion(pos, 2.5f, 8.3f);

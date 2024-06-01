@@ -7994,7 +7994,7 @@ public:
                             break;
                         }
                         if (PlaneSmokeParticles) {
-                            CParticleObject::AddObject(POBJECT_SMOKE_TRAIL, (CVector&)*position, CVector(0.0f, 0.0f, 0.0f), 0.35f, 0, color, 1);
+                            CParticleObject::AddObject(POBJECT_SMOKE_TRAIL, (CVector&)*position, CVector(0.0f, 0.0f, 0.0f), 0.35f, 350, color, true);
                         }
                     }    
         };

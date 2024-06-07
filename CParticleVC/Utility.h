@@ -14,6 +14,9 @@
 #include <CStreaming.h>
 #include "CClouds.h"
 #include "MemoryMgr.h"
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 using namespace plugin;
 #define PERCENT(x, p)                    ((float(x) * (float(p) / 100.0f)))
 #define ARRAY_SIZE(array)                (sizeof(array) / sizeof(array[0]))

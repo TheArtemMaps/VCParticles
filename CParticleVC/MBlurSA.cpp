@@ -34,6 +34,7 @@ ThiscallEvent    <AddressList<0x53E175, H_CALL>, PRIORITY_AFTER, ArgPickNone, vo
 #ifndef LIBRW
 #include <dxsdk/d3d8caps.h>
 #endif
+using namespace std;
 
 RwRaster* CMBlur::pFrontBuffer;
 bool CMBlur::ms_bJustInitialised;
@@ -580,8 +581,8 @@ CMBlur::AddRenderFx(RwCamera* cam, RwRect* rect, float z, FxType type)
 
 	rect->x = max(rect->x, 0);
 	rect->y = max(rect->y, 0);
-	rect->w = min(rect->w, SCREEN_WIDTH);
-	rect->h = min(rect->h, SCREEN_HEIGHT);
+	rect->w = min(rect->w, (int)SCREEN_WIDTH);
+	rect->h = min(rect->h, (int)SCREEN_HEIGHT);
 	if (rect->x >= rect->w || rect->y >= rect->h)
 		return false;
 

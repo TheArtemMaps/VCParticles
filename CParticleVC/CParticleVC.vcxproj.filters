@@ -6,10 +6,11 @@
     <ClCompile Include="CDebug.cpp" />
     <ClCompile Include="CSprite2.cpp" />
     <ClCompile Include="ParticleMgr.cpp" />
-    <ClCompile Include="WaterLevelVC.cpp" />
     <ClCompile Include="CExplosionVC.cpp" />
-    <ClCompile Include="FireVC.cpp" />
     <ClCompile Include="MBlurSA.cpp" />
+    <ClCompile Include="Buoyancy.cpp" />
+    <ClCompile Include="ParticleObject.cpp" />
+    <ClCompile Include="SceneEdit.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="RenderBuffer.h" />
@@ -19,12 +20,15 @@
     <ClInclude Include="ParticleMgr.h" />
     <ClInclude Include="ParticleType.h" />
     <ClInclude Include="debugmenu_public.h" />
-    <ClInclude Include="WaterLevelVC.h" />
     <ClInclude Include="CExplosionVC.h" />
-    <ClInclude Include="FireVC.h" />
     <ClInclude Include="MBlurSA.h" />
     <ClInclude Include="ini_parser.hpp" />
     <ClInclude Include="IniReader.h" />
     <ClInclude Include="Utility.h" />
+    <ClInclude Include="Buoyancy.h" />
+    <ClInclude Include="ParticleObject.h" />
+    <ClInclude Include="SceneEdit.h" />
+    <ClInclude Include="MemoryMgr.h" />
+    <ClInclude Include="Exported functions.h" />
   </ItemGroup>
 </Project>

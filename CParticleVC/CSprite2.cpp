@@ -21,7 +21,7 @@ static RwIm2DVertex verts[4];
 void
 CSprite2::InitSpriteBuffer2D(void)
 {
-	m_fRecipNearClipPlane = 1.0f / Scene.m_pRwCamera->nearPlane;
+	m_fRecipNearClipPlane = 1.0f / Scene.m_pCamera->nearPlane;
 	InitSpriteBuffer();
 }
 
@@ -139,7 +139,7 @@ void
 CSprite2::Set6Vertices2D(RwIm2DVertex* verts, const CRect& r, const CRGBA& c0, const CRGBA& c1, const CRGBA& c2, const CRGBA& c3)
 {
 	float screenz, recipz;
-	float z = Scene.m_pRwCamera->nearPlane;	// not done by game
+	float z = Scene.m_pCamera->nearPlane;	// not done by game
 
 	screenz = m_f2DNearScreenZ;
 	recipz = m_fRecipNearClipPlane;
@@ -204,7 +204,7 @@ CSprite2::Set6Vertices2D(RwIm2DVertex* verts, float x1, float y1, float x2, floa
 	const CRGBA& c0, const CRGBA& c1, const CRGBA& c2, const CRGBA& c3)
 {
 	float screenz, recipz;
-	float z = Scene.m_pRwCamera->nearPlane;	// not done by game
+	float z = Scene.m_pCamera->nearPlane;	// not done by game
 
 	screenz = m_f2DNearScreenZ;
 	recipz = m_fRecipNearClipPlane;

@@ -4,6 +4,7 @@
 #include "Utility.h"
 #include "ParticleType.h"
 #include <csignal>
+using namespace std;
 uint8_t work_buff[55000];
 cParticleSystemMgr mod_ParticleSystemManager;
 const char* ParticleFilename = PLUGIN_PATH((char*)"DATA\\PARTICLE.CFG");

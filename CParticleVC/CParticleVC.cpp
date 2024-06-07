@@ -60,6 +60,7 @@
 #include "extensions/ScriptCommands.h"
 #include "Plane.h"
 #include "postfx.h"
+using namespace std;
 CAEExplosionAudioEntity& m_ExplosionAudioEntity1 = *(CAEExplosionAudioEntity*)0xC888D0;
 using namespace plugin;
 DebugMenuAPI gDebugMenuAPI;
@@ -134,6 +135,33 @@ struct tRainStreak
     CVector direction;
     uint32_t timer;
 };
+
+RwTexture* GetTexture(const char* path) {
+    // Создаем текущее окружение RenderWare
+    RwImageSetPath(path);
+
+    // Загружаем текстуру
+    RwTexture* texture = RwTextureRead(path, NULL);
+
+    if (!texture) {
+        // Текстура не найдена, возвращаем nullptr
+        ErrorWindow("Texture %d at path: %s was not found!", texture, path);
+        return nullptr;
+    }
+
+    return texture;
+}
+
+RwTexture* GetTextureFromPath(char* TextureName)
+{
+    char Path[MAX_PATH];
+    sprintf(Path, "%s%s", ".\\Textures\\VCParticle\\", TextureName);
+    return GetTexture(Path);
+}
+struct NewParticle {
+
+};
+
 void Log(const char* msg, ...) {
     // If log file ain't open yet, open it
     if (LogFile == nullptr && Logging) {
@@ -2130,7 +2158,9 @@ CParticle* CParticle::AddParticle(tParticleType type, CVector const& vecPos, CVe
         || type == PARTICLE_RUBBER_SMOKE
         || type == PARTICLE_BURNINGRUBBER_SMOKE
         || type == PARTICLE_EXHAUST_FUMES
-        || type == PARTICLE_CARCOLLISION_DUST)
+        || type == PARTICLE_CARCOLLISION_DUST
+        || type == PARTICLE_FERRY_CHIM_SMOKE
+        || type == PARTICLE_HYDRANT_STEAM)
         && nParticleCreationInterval & CTimer::m_FrameCounter)
     {
         return nullptr;
@@ -3225,7 +3255,7 @@ void CParticle::Render()
                         else
                             BlurType = FXTYPE_WATER1;
                         if (WaterDrops) {
-                            CMBlur::AddRenderFx(Scene.m_pRwCamera, &rect, screenZ, fxtype);
+                            CMBlur::AddRenderFx(Scene.m_pCamera, &rect, screenZ, fxtype);
                         }
 
                         canDraw = false;
@@ -3256,7 +3286,7 @@ void CParticle::Render()
                         else
                             BlurType = FXTYPE_BLOOD1;
                         if (BloodDrops) {
-                            CMBlur::AddRenderFx(Scene.m_pRwCamera, &rect, screenZ, fxtype);
+                            CMBlur::AddRenderFx(Scene.m_pCamera, &rect, screenZ, fxtype);
                         }
                         canDraw = false;
                     }
@@ -3270,7 +3300,7 @@ void CParticle::Render()
                         rect.w = int32_t(particle->m_vecPosition.x + SCREEN_STRETCH_X(particle->m_fSize * stretchTexW));
                         rect.h = int32_t(particle->m_vecPosition.y + SCREEN_STRETCH_Y(particle->m_fSize * stretchTexH * 0.15f));
 
-                        CMBlur::AddRenderFx(Scene.m_pRwCamera, &rect, screenZ, FXTYPE_HEATHAZE);
+                        CMBlur::AddRenderFx(Scene.m_pCamera, &rect, screenZ, FXTYPE_HEATHAZE);
 
                         canDraw = false;
                     }
@@ -3306,7 +3336,7 @@ void CParticle::Render()
                             break;
                         }
 
-                        CMBlur::AddRenderFx(Scene.m_pRwCamera, &rect, screenZ, FXTYPE_HEATHAZE);
+                        CMBlur::AddRenderFx(Scene.m_pCamera, &rect, screenZ, FXTYPE_HEATHAZE);
 
                         canDraw = false;
                     }
@@ -3431,7 +3461,7 @@ void CParticle::Render()
                                 * (RwIm2DGetFarScreenZ() - RwIm2DGetNearScreenZ()) * CDraw::ms_fFarClipZ
                                 / ((CDraw::ms_fFarClipZ - CDraw::ms_fNearClipZ) * coors.z) + RwIm2DGetNearScreenZ();
 
-                            CMBlur::AddRenderFx(Scene.m_pRwCamera, &rect, screenZ, FXTYPE_SPLASH1);
+                            CMBlur::AddRenderFx(Scene.m_pCamera, &rect, screenZ, FXTYPE_SPLASH1);
                         }
                         else
                         {
@@ -6414,9 +6444,12 @@ static void __fastcall FxInfo(FxPrtMult_c* infa,
     infa = &info;
 }
 
-void __fastcall MyTriggerGunflash(Fx_c* fx, int, CEntity* entity, CVector& origin, CVector& target, bool doGunflash = false)
+static void __fastcall MyTriggerGunflash(Fx_c* fx, int, CEntity* entity, CVector& origin, CVector& target, bool doGunflash)
 {
-    DoGunFlash((CPed*)entity, &origin);
+    if (entity) {
+        CPed* ped = reinterpret_cast<CPed*>(entity);
+        DoGunFlash(ped, &origin);
+    }
 }
 
 RwRGBA FoamColour(255, 255, 255, 255);
@@ -6792,8 +6825,9 @@ public:
                 patch::RedirectCall(0x5E36A5, FxInfo);
             }
             if (MuzzleFlashnSmoke) {
-                patch::RedirectCall(0x48ED94, MyTriggerGunflash);
-                patch::RedirectCall(0x740DA7, MyTriggerGunflash);
+                Memory::InjectHook(0x48ED94, &MyTriggerGunflash, PATCH_CALL);
+                Memory::InjectHook(0x740DA7, &MyTriggerGunflash, PATCH_CALL);
+                //patch::RedirectJump(0x4A0DE0, MyTriggerGunflash);
                 plugin::patch::Nop(0x61ECE6, 0x61ECFA - 0x61ECE6); // CPed::DoGunFlash [CTaskSimpleUseGun::FireGun]
               //   injector::MakeNOP(0x4A0F38, 5, true);
             }

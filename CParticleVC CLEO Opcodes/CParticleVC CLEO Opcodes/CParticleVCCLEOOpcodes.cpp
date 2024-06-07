@@ -357,7 +357,7 @@ public:
         return OR_CONTINUE;
     }
     static OpcodeResult WINAPI AddBigGunFlashMain(CScriptThread* thread) {
-         AddBigGunFlashOpcode(thread);
+        AddBigGunFlashOpcode(thread);
         return OR_CONTINUE;
     }
 

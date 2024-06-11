@@ -17,6 +17,21 @@
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
+#define NUM_AUDIOENTITIES 250
+#define NUM_SOUND_QUEUES 2
+#define NUM_SCRIPT_MAX_ENTITIES 40
+#define NUM_PED_COMMENTS_SLOTS 20
+#define NUM_AUDIOENTITY_EVENTS 4
+#define MAX_VOLUME 127
+inline CVector MultiplyInverse(const CMatrix& mat, const CVector& vec)
+{
+    CVector v(vec.x - mat.pos.x, vec.y - mat.pos.y, vec.z - mat.pos.z);
+    return CVector(
+        mat.right.x * v.x + mat.right.y * v.y + mat.right.z * v.z,
+        mat.GetForward().x * v.x + mat.GetForward().y * v.y + mat.GetForward().z * v.z,
+        mat.up.x * v.x + mat.up.y * v.y + mat.up.z * v.z);
+}
+#define Clamp2(v, center, radius) ((v) > (center) ? min(v, center + radius) : max(v, center - radius))
 using namespace plugin;
 #define PERCENT(x, p)                    ((float(x) * (float(p) / 100.0f)))
 #define ARRAY_SIZE(array)                (sizeof(array) / sizeof(array[0]))

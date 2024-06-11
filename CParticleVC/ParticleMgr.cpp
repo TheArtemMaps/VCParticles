@@ -4,9 +4,17 @@
 #include "Utility.h"
 #include "ParticleType.h"
 #include <csignal>
+#include "IniReader.h"
+#include <CTxdStore.h>
 using namespace std;
 uint8_t work_buff[55000];
 cParticleSystemMgr mod_ParticleSystemManager;
+RwTexture* gpParticleTexture[63];
+int32_t ParticlesTotalTexturesCount;
+int32_t ParticlesTotalTexturesCount2;
+bool ParticleInitialized[1024] = { false };
+RwTexture* ParticleTexture[1024];
+RwRaster* Raster[1024];
 const char* ParticleFilename = PLUGIN_PATH((char*)"DATA\\PARTICLE.CFG");
 
 cParticleSystemMgr::cParticleSystemMgr()
@@ -17,9 +25,226 @@ cParticleSystemMgr::cParticleSystemMgr()
 void cParticleSystemMgr::Initialise()
 {
 	LoadParticleData();
-
-	for (int32_t i = 0; i < MAX_PARTICLES; i++)
+	/*CIniReader ini(PLUGIN_PATH((char*)"CParticleVC.ini"));
+	for (int32_t i = 0; i < 1024; i++) {
+		CTxdStore::PushCurrentTxd();
+		int32_t slot2 = CTxdStore::AddTxdSlot("particleVC");
+		CTxdStore::LoadTxd(slot2, PLUGIN_PATH((char*)"MODELS\\PARTICLEVC.TXD"));
+		CTxdStore::AddRef(slot2);
+		int32_t slot = CTxdStore::FindTxdSlot("particleVC");
+		CTxdStore::SetCurrentTxd(slot);
+		std::string name = "PARTICLE";
+		std::string section = std::format("{}{}", name, i);
+		std::string texture[1024] = { ini.ReadString(section, "texture", "") };
+		ParticleTexture[i] = RwTextureRead(texture[i].c_str(), NULL);
+		Raster[i] = RwTextureGetRaster(ParticleTexture[i]);
+		log("Section: %s", section);
+		RwUInt8 red = ini.ReadInteger(section, "render_colouring_r", -1);
+		//if (section.empty()) break;
+		//assert(ParticleTexture != NULL);
+		if (red != -1) {
+			ParticleInitialized[i] = true;
+			m_aParticlesINI[i].m_ppRaster = &gpCloudTex[0]->raster;
+			*m_aParticlesINI[i].m_aNamestd = ini.ReadString(section, "name", "");
+			m_aParticlesINI[i].m_RenderColouring.red = red;
+			m_aParticlesINI[i].m_RenderColouring.green = ini.ReadInteger(section, "render_colouring_g", 0);
+			m_aParticlesINI[i].m_RenderColouring.blue = ini.ReadInteger(section, "render_colouring_b", 0);
+			m_aParticlesINI[i].m_InitialColorVariation = ini.ReadInteger(section, "initial_color_variation", 0);
+			m_aParticlesINI[i].m_FadeDestinationColor.red = ini.ReadInteger(section, "fade_destination_color_r", 0);
+			m_aParticlesINI[i].m_FadeDestinationColor.green = ini.ReadInteger(section, "fade_destination_color_g", 0);
+			m_aParticlesINI[i].m_FadeDestinationColor.blue = ini.ReadInteger(section, "fade_destination_color_b", 0);
+			m_aParticlesINI[i].m_ColorFadeTime = ini.ReadInteger(section, "color_fade_time", 0);
+			m_aParticlesINI[i].m_fDefaultInitialRadius = ini.ReadFloat(section, "default_initial_radius", 0.0f);
+			m_aParticlesINI[i].m_fExpansionRate = ini.ReadFloat(section, "expansion_rate", 0.0f);
+			m_aParticlesINI[i].m_nFadeToBlackInitialIntensity = ini.ReadInteger(section, "initial_intensity", 0);
+			m_aParticlesINI[i].m_nFadeToBlackTime = ini.ReadInteger(section, "fade_time", 0);
+			m_aParticlesINI[i].m_nFadeToBlackAmount = ini.ReadInteger(section, "fade_amount", 0);
+			m_aParticlesINI[i].m_nFadeAlphaInitialIntensity = ini.ReadInteger(section, "initial_alpha_intensity", 0);
+			m_aParticlesINI[i].m_nFadeAlphaTime = ini.ReadInteger(section, "fade_alpha_time", 0);
+			m_aParticlesINI[i].m_nFadeAlphaAmount = ini.ReadInteger(section, "fade_alpha_amount", 0);
+			m_aParticlesINI[i].m_nZRotationInitialAngle = ini.ReadInteger(section, "initial_angle", 0);
+			m_aParticlesINI[i].m_nZRotationChangeTime = ini.ReadInteger(section, "change_time", 0);
+			m_aParticlesINI[i].m_nZRotationAngleChangeAmount = ini.ReadInteger(section, "angle_change_amount", 0);
+			m_aParticlesINI[i].m_fInitialZRadius = ini.ReadFloat(section, "initial_z_radius", 0.0f);
+			m_aParticlesINI[i].m_nZRadiusChangeTime = ini.ReadInteger(section, "z_radius_change_time", 0);
+			m_aParticlesINI[i].m_fZRadiusChangeAmount = ini.ReadFloat(section, "z_radius_change_amount", 0.0f);
+			m_aParticlesINI[i].m_nAnimationSpeed = ini.ReadInteger(section, "animation_speed", 0);
+			m_aParticlesINI[i].m_nStartAnimationFrame = ini.ReadInteger(section, "start_animation_frame", 0);
+			m_aParticlesINI[i].m_nFinalAnimationFrame = ini.ReadInteger(section, "final_animation_frame", 0);
+			m_aParticlesINI[i].m_nRotationSpeed = ini.ReadInteger(section, "rotation_speed", 0);
+			m_aParticlesINI[i].m_fGravitationalAcceleration = ini.ReadFloat(section, "gravitational_acceleration", 0.0f);
+			m_aParticlesINI[i].m_nFrictionDecceleration = ini.ReadInteger(section, "friction_decceleration", 0);
+			m_aParticlesINI[i].m_nLifeSpan = ini.ReadInteger(section, "life_span", 0);
+			m_aParticlesINI[i].m_fPositionRandomError = ini.ReadFloat(section, "position_random_error", 0.0f);
+			m_aParticlesINI[i].m_fVelocityRandomError = ini.ReadFloat(section, "velocity_random_error", 0.0f);
+			m_aParticlesINI[i].m_fExpansionRateError = ini.ReadFloat(section, "expansion_rate_error", 0.0f);
+			m_aParticlesINI[i].m_nRotationRateError = ini.ReadInteger(section, "rotation_rate_error", 0);
+			m_aParticlesINI[i].m_nLifeSpanErrorShape = ini.ReadInteger(section, "life_span_error_shape", 0);
+			m_aParticlesINI[i].m_fTrailLengthMultiplier = ini.ReadFloat(section, "trail_length_multiplier", 0.0f);
+			m_aParticlesINI[i].m_vecTextureStretch.x = ini.ReadFloat(section, "stretch_value_x", 0.0f);
+			m_aParticlesINI[i].m_vecTextureStretch.y = ini.ReadFloat(section, "stretch_value_y", 0.0f);
+			m_aParticlesINI[i].m_fWindFactor = ini.ReadFloat(section, "wind_factor", 0.0f);
+			m_aParticlesINI[i].m_fCreateRange = ini.ReadFloat(section, "particle_create_range", 0.0f);
+			m_aParticlesINI[i].Flags = ini.ReadInteger(section, "flags", 0);
+			log("Loading Particle From INI: %s\n"
+				"\tInteger Type: %d\n"
+				"\tColour (R,G,B): (%d,%d,%d)\n"
+				"\tInitial Color Variation: %d\n"
+				"\tFade Destination Colour (R,G,B): (%d,%d,%d)\n"
+				"\tColor Fade Time: %d\n"
+				"\tDefault Initial Radius: %f\n"
+				"\tExpansion Rate: %f\n"
+				"\tInitial Intensity: %d\n"
+				"\tFade Time: %d\n"
+				"\tFade Amount: %d\n"
+				"\tInitial Alpha Intensity: %d\n"
+				"\tFade Alpha Time: %d\n"
+				"\tFade Alpha Amount: %d\n"
+				"\tInitial Angle: %d\n"
+				"\tChange Time: %d\n"
+				"\tAngle Change Amount: %d\n"
+				"\tInitial Z Radius: %f\n"
+				"\tZ Radius Change Time: %d\n"
+				"\tZ Radius Change Amount: %f\n"
+				"\tAnimation Speed: %d\n"
+				"\tStart Animation Frame: %d\n"
+				"\tFinal Animation Frame: %d\n"
+				"\tRotation Speed: %d\n"
+				"\tGravitational Acceleration: %f\n"
+				"\tFriction Deceleration: %d\n"
+				"\tLife Span: %d\n"
+				"\tPosition Random Error: %f\n"
+				"\tVelocity Random Error: %f\n"
+				"\tExpansion Rate Error: %f\n"
+				"\tRotation Rate Error: %d\n"
+				"\tLife Span Error Shape: %d\n"
+				"\tTrail Length Multiplier: %f\n"
+				"\tStretch Value X: %f\n"
+				"\tStretch Value Y: %f\n"
+				"\tWind Factor: %f\n"
+				"\tParticle Create Range: %f\n"
+				"\tFlags: %d\n",
+				m_aParticlesINI[i].m_aNamestd,
+				m_aParticlesINI[i].m_Type,
+				m_aParticlesINI[i].m_RenderColouring.red, m_aParticlesINI[i].m_RenderColouring.green, m_aParticlesINI[i].m_RenderColouring.blue,
+				m_aParticlesINI[i].m_InitialColorVariation,
+				m_aParticlesINI[i].m_FadeDestinationColor.red, m_aParticlesINI[i].m_FadeDestinationColor.green, m_aParticlesINI[i].m_FadeDestinationColor.blue,
+				m_aParticlesINI[i].m_ColorFadeTime,
+				m_aParticlesINI[i].m_fDefaultInitialRadius,
+				m_aParticlesINI[i].m_fExpansionRate,
+				m_aParticlesINI[i].m_nFadeToBlackInitialIntensity,
+				m_aParticlesINI[i].m_nFadeToBlackTime,
+				m_aParticlesINI[i].m_nFadeToBlackAmount,
+				m_aParticlesINI[i].m_nFadeAlphaInitialIntensity,
+				m_aParticlesINI[i].m_nFadeAlphaTime,
+				m_aParticlesINI[i].m_nFadeAlphaAmount,
+				m_aParticlesINI[i].m_nZRotationInitialAngle,
+				m_aParticlesINI[i].m_nZRotationChangeTime,
+				m_aParticlesINI[i].m_nZRotationAngleChangeAmount,
+				m_aParticlesINI[i].m_fInitialZRadius,
+				m_aParticlesINI[i].m_nZRadiusChangeTime,
+				m_aParticlesINI[i].m_fZRadiusChangeAmount,
+				m_aParticlesINI[i].m_nAnimationSpeed,
+				m_aParticlesINI[i].m_nStartAnimationFrame,
+				m_aParticlesINI[i].m_nFinalAnimationFrame,
+				m_aParticlesINI[i].m_nRotationSpeed,
+				m_aParticlesINI[i].m_fGravitationalAcceleration,
+				m_aParticlesINI[i].m_nFrictionDecceleration,
+				m_aParticlesINI[i].m_nLifeSpan,
+				m_aParticlesINI[i].m_fPositionRandomError,
+				m_aParticlesINI[i].m_fVelocityRandomError,
+				m_aParticlesINI[i].m_fExpansionRateError,
+				m_aParticlesINI[i].m_nRotationRateError,
+				m_aParticlesINI[i].m_nLifeSpanErrorShape,
+				m_aParticlesINI[i].m_fTrailLengthMultiplier,
+				m_aParticlesINI[i].m_vecTextureStretch.x,
+				m_aParticlesINI[i].m_vecTextureStretch.y,
+				m_aParticlesINI[i].m_fWindFactor,
+				m_aParticlesINI[i].m_fCreateRange,
+				m_aParticlesINI[i].Flags);
+			//CTxdStore::PopCurrentTxd();
+		}
+	}*/
+	for (int32_t i = 0; i < MAX_PARTICLES; i++) {
 		m_aParticles[i].m_pParticles = NULL;
+	//	m_aParticlesINI[i].m_pParticles = NULL;
+		log("Loading Particle: %s\n"
+			"\tInteger Type: %d\n"
+			"\tColour (R,G,B): (%d,%d,%d)\n"
+			"\tInitial Color Variation: %d\n"
+			"\tFade Destination Colour (R,G,B): (%d,%d,%d)\n"
+			"\tColor Fade Time: %d\n"
+			"\tDefault Initial Radius: %f\n"
+			"\tExpansion Rate: %f\n"
+			"\tInitial Intensity: %d\n"
+			"\tFade Time: %d\n"
+			"\tFade Amount: %d\n"
+			"\tInitial Alpha Intensity: %d\n"
+			"\tFade Alpha Time: %d\n"
+			"\tFade Alpha Amount: %d\n"
+			"\tInitial Angle: %d\n"
+			"\tChange Time: %d\n"
+			"\tAngle Change Amount: %d\n"
+			"\tInitial Z Radius: %f\n"
+			"\tZ Radius Change Time: %d\n"
+			"\tZ Radius Change Amount: %f\n"
+			"\tAnimation Speed: %d\n"
+			"\tStart Animation Frame: %d\n"
+			"\tFinal Animation Frame: %d\n"
+			"\tRotation Speed: %d\n"
+			"\tGravitational Acceleration: %f\n"
+			"\tFriction Deceleration: %d\n"
+			"\tLife Span: %d\n"
+			"\tPosition Random Error: %f\n"
+			"\tVelocity Random Error: %f\n"
+			"\tExpansion Rate Error: %f\n"
+			"\tRotation Rate Error: %d\n"
+			"\tLife Span Error Shape: %d\n"
+			"\tTrail Length Multiplier: %f\n"
+			"\tStretch Value X: %f\n"
+			"\tStretch Value Y: %f\n"
+			"\tWind Factor: %f\n"
+			"\tParticle Create Range: %f\n"
+			"\tFlags: %d\n",
+			m_aParticles[i].m_aName,
+			m_aParticles[i].m_Type,
+			m_aParticles[i].m_RenderColouring.red, m_aParticles[i].m_RenderColouring.green, m_aParticles[i].m_RenderColouring.blue,
+			m_aParticles[i].m_InitialColorVariation,
+			m_aParticles[i].m_FadeDestinationColor.red, m_aParticles[i].m_FadeDestinationColor.green, m_aParticles[i].m_FadeDestinationColor.blue,
+			m_aParticles[i].m_ColorFadeTime,
+			m_aParticles[i].m_fDefaultInitialRadius,
+			m_aParticles[i].m_fExpansionRate,
+			m_aParticles[i].m_nFadeToBlackInitialIntensity,
+			m_aParticles[i].m_nFadeToBlackTime,
+			m_aParticles[i].m_nFadeToBlackAmount,
+			m_aParticles[i].m_nFadeAlphaInitialIntensity,
+			m_aParticles[i].m_nFadeAlphaTime,
+			m_aParticles[i].m_nFadeAlphaAmount,
+			m_aParticles[i].m_nZRotationInitialAngle,
+			m_aParticles[i].m_nZRotationChangeTime,
+			m_aParticles[i].m_nZRotationAngleChangeAmount,
+			m_aParticles[i].m_fInitialZRadius,
+			m_aParticles[i].m_nZRadiusChangeTime,
+			m_aParticles[i].m_fZRadiusChangeAmount,
+			m_aParticles[i].m_nAnimationSpeed,
+			m_aParticles[i].m_nStartAnimationFrame,
+			m_aParticles[i].m_nFinalAnimationFrame,
+			m_aParticles[i].m_nRotationSpeed,
+			m_aParticles[i].m_fGravitationalAcceleration,
+			m_aParticles[i].m_nFrictionDecceleration,
+			m_aParticles[i].m_nLifeSpan,
+			m_aParticles[i].m_fPositionRandomError,
+			m_aParticles[i].m_fVelocityRandomError,
+			m_aParticles[i].m_fExpansionRateError,
+			m_aParticles[i].m_nRotationRateError,
+			m_aParticles[i].m_nLifeSpanErrorShape,
+			m_aParticles[i].m_fTrailLengthMultiplier,
+			m_aParticles[i].m_vecTextureStretch.x,
+			m_aParticles[i].m_vecTextureStretch.y,
+			m_aParticles[i].m_fWindFactor,
+			m_aParticles[i].m_fCreateRange,
+			m_aParticles[i].Flags);
+	}
 }
 
 void cParticleSystemMgr::LoadParticleData()

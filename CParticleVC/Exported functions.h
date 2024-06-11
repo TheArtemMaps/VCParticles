@@ -25,7 +25,7 @@ void __cdecl RemovePSystem(int particlesystem) {
 }
 
 void __cdecl AddParticleObject(uint8_t ParticleObjectType, float x, float y, float z, float strengthX, float strengthY, float strengthZ, float scale, RwUInt8 r, RwUInt8 g, RwUInt8 b, RwUInt8 a, int durationInMs, bool remove) {
-    ((void(__cdecl*)(uint8_t, float, float, float, float, float, float, float, RwUInt8, RwUInt8, RwUInt8, RwUInt8, int, bool))GetExportedFunction("AddParticleObject"))(ParticleObjectType, x, y, z, strengthX, strengthY, strengthZ, scale, r, g, b, a, durationInMs, remove);
+    return ((void(__cdecl*)(uint8_t, float, float, float, float, float, float, float, RwUInt8, RwUInt8, RwUInt8, RwUInt8, int, bool))GetExportedFunction("AddParticleObject"))(ParticleObjectType, x, y, z, strengthX, strengthY, strengthZ, scale, r, g, b, a, durationInMs, remove);
 }
 
 void __cdecl RemoveParticleObjectsInArea(float x1, float y1, float z1, float x2, float y2, float z2) {

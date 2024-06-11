@@ -60,9 +60,13 @@
 #include "extensions/ScriptCommands.h"
 #include "Plane.h"
 #include "postfx.h"
+#include "CHud.h"
+#include <windows.h>
+#include <wininet.h>
+#pragma comment(lib, "wininet.lib")
 using namespace std;
-CAEExplosionAudioEntity& m_ExplosionAudioEntity1 = *(CAEExplosionAudioEntity*)0xC888D0;
 using namespace plugin;
+CAEExplosionAudioEntity& m_ExplosionAudioEntity1 = *(CAEExplosionAudioEntity*)0xC888D0;
 DebugMenuAPI gDebugMenuAPI;
 int32_t particles = PARTICLE_FIRST;
 int32_t particleobjects = POBJECT_PAVEMENT_STEAM;
@@ -125,7 +129,8 @@ bool ExplosionsFlash = true;
 bool SteamDuringRain = true, SteamAfterRain = true;
 bool DieselVehiclesBlackSmoke = true;
 int SnowFlakes = 1;
-int ModelIndex = MODEL_HERMES;
+bool ShouldHaveFireExhaust[1024] = { false };
+bool InitializedVehicle[1024] = { false };
 enum {
     NUM_RAIN_STREAKS = 35
 };
@@ -137,14 +142,14 @@ struct tRainStreak
 };
 
 RwTexture* GetTexture(const char* path) {
-    // Создаем текущее окружение RenderWare
+    // Set image path
     RwImageSetPath(path);
 
-    // Загружаем текстуру
+    // Load the texture
     RwTexture* texture = RwTextureRead(path, NULL);
 
     if (!texture) {
-        // Текстура не найдена, возвращаем nullptr
+        // Texture was not found, return nullptr
         ErrorWindow("Texture %d at path: %s was not found!", texture, path);
         return nullptr;
     }
@@ -938,6 +943,16 @@ void CParticle::ReloadConfig()
     debug("Reloading ini file...");
     // You can hot-reload these through debug menu
     CIniReader ini(PLUGIN_PATH((char*)"CParticleVC.ini"));
+    for (int32_t i = 0; i < 1024; i++) {
+    auto string1 = std::format("{}{}", "VEH", i);
+    auto string2 = string1.c_str();
+    bool Should = ini.ReadBoolean(string2, "Should have fire on exhaust", false);
+        if (Should != false) { // Check if the section exists by checking a default value
+            InitializedVehicle[i] = true;
+            ShouldHaveFireExhaust[i] = Should;
+            log("Section1: %s Section2: %s", string1, string2);
+        }
+    }
     gbDebugStuffInRelease = ini.ReadBoolean("MAIN", "Enable debug text", false);
     maxBytesInLog = ini.ReadInteger("MAIN", "MaxLogSize", 5242880);
     Logging = ini.ReadBoolean("MAIN", "Enable logging", false);
@@ -988,7 +1003,6 @@ void CParticle::ReloadConfig()
     nParticleCreationInterval = ini.ReadInteger("MISC", "Particles creation interval", 1);
     PARTICLE_WIND_TEST_SCALE = ini.ReadFloat("MISC", "PARTICLE_WIND_TEST_SCALE", 0.002f);
     fParticleScaleLimit = ini.ReadFloat("MISC", "Particles scale limit", 0.5f);
-    ModelIndex = ini.ReadInteger("MISC", "Exhaust fire model index", MODEL_HERMES);
     SnowFlakes = ini.ReadInteger("MISC", "Max snow flakes", 1);
     /*for (int32_t i = 0; i < MAX_PARTICLES_INI; i++)
     {
@@ -2178,10 +2192,10 @@ CParticle* CParticle::AddParticle(tParticleType type, CVector const& vecPos, CVe
 
     if (psystem->m_fCreateRange != 0.0f && psystem->m_fCreateRange < static_cast<Vec>((TheCamera.GetPosition() - vecPos)).MagnitudeSqr())
         return nullptr;
-    log("Particle with name %s was created at pos X:%4.0f Y:%4.0f Z:%4.0f with size %f velocity X:%f Y:%f Z:%f and color R:%d G:%d B:%d A:%d",
+    log("Particle with name %s was created at pos X:%4.0f Y:%4.0f Z:%4.0f with size %f velocity X:%f Y:%f Z:%f lifespan %d and color R:%d G:%d B:%d A:%d",
         psystem->m_aName,
         pParticle->m_vecPosition.x,
-        pParticle->m_vecPosition.y, pParticle->m_vecPosition.z, pParticle->m_fSize, pParticle->m_vecVelocity.x, pParticle->m_vecVelocity.y, pParticle->m_vecVelocity.z, pParticle->m_Color.red, pParticle->m_Color.green, pParticle->m_Color.blue, pParticle->m_Color.alpha);
+        pParticle->m_vecPosition.y, pParticle->m_vecPosition.z, pParticle->m_fSize, pParticle->m_vecVelocity.x, pParticle->m_vecVelocity.y, pParticle->m_vecVelocity.z, nLifeSpan, pParticle->m_Color.red, pParticle->m_Color.green, pParticle->m_Color.blue, pParticle->m_Color.alpha);
     debug("Particle with name %s was created at pos X:%4.0f Y:%4.0f Z:%4.0f",
         psystem->m_aName,
         pParticle->m_vecPosition.x,
@@ -2386,7 +2400,7 @@ CParticle* CParticle::AddParticle(tParticleType type, CVector const& vecPos, CVe
     case PARTICLE_EXPLOSION_LARGE:
         pParticle->m_nColorIntensity -= 30 * (GetRandomNumber() & 1); // mb "+= -30 * rand" here ?
         pParticle->m_nAnimationSpeedTimer = GetRandomNumber() & 7;
-        pParticle->m_fSize = CGeneral::GetRandomNumberInRange(0.8f, 1.8f); // 0.8f, 1.4f
+        pParticle->m_fSize = CGeneral::GetRandomNumberInRange(0.8f, 5.0f); // 0.8f, 1.4f
         pParticle->m_vecPosition.z -= CGeneral::GetRandomNumberInRange(-0.3f, 0.3f);
         break;
 
@@ -2408,6 +2422,79 @@ CParticle* CParticle::AddParticle(tParticleType type, CVector const& vecPos, CVe
     return pParticle;
 }
 
+/*bool UpToDate = false;
+bool CheckedAnUpdate = false;
+bool NewVersionIsOut = false;
+static uint32_t timetocheck = 0;
+
+void CheckUpdates() {
+    const char* url = "https://raw.githubusercontent.com/TheArtemMaps/VCParticles/main/updatecheck.txt";
+    HINTERNET hInternet = InternetOpen("UpdateChecker", INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
+    if (!hInternet) {
+        log("InternetOpen failed: %lu", GetLastError());
+        return;
+    }
+
+    HINTERNET hConnect = InternetOpenUrl(hInternet, url, NULL, 0, INTERNET_FLAG_RELOAD, 0);
+    if (!hConnect) {
+        log("InternetOpenUrl failed: %lu", GetLastError());
+        InternetCloseHandle(hInternet);
+        return;
+    }
+
+    char buffer[4096];
+    DWORD bytesRead;
+    std::string content;
+
+    while (InternetReadFile(hConnect, buffer, sizeof(buffer) - 1, &bytesRead) && bytesRead) {
+        buffer[bytesRead] = '\0';
+        content.append(buffer, bytesRead);
+    }
+
+    InternetCloseHandle(hConnect);
+    InternetCloseHandle(hInternet);
+
+    // Search the version in the file
+    std::string::size_type pos = content.find("VERSION = ");
+    if (pos != std::string::npos) {
+        pos += 10; // Skip "VERSION = "
+        std::string::size_type end = content.find_first_not_of("0123456789.", pos);
+        if (end == std::string::npos) end = content.length();
+        double githubVersion = std::stod(content.substr(pos, end - pos));
+
+        // Compare with current version
+        double currentVersion = 1.0;
+        if (currentVersion >= githubVersion) {
+            UpToDate = true;
+            NewVersionIsOut = false;
+            std::string message = "VCParticles is up to date: " + std::to_string(currentVersion);
+            CHud::SetHelpMessage(message.c_str(), false, false, false);
+        }
+        else {
+            UpToDate = false;
+            NewVersionIsOut = true;
+            std::string message = "New update available! Current version: " + std::to_string(currentVersion) + ", New version: " + std::to_string(githubVersion);
+            CHud::SetHelpMessage(message.c_str(), false, false, false);
+        }
+    }
+    else {
+        UpToDate = false;
+        NewVersionIsOut = false;
+        CHud::SetHelpMessage("Failed to find version info in the file.", false, false, false);
+        log("Failed to find version info in the file.");
+    }
+
+    CheckedAnUpdate = true;
+}
+
+void UpdateCheckHandler() {
+    if (CTimer::m_snTimeInMilliseconds - timetocheck > 5000) {
+        if (!CheckedAnUpdate || NewVersionIsOut) {
+            CheckUpdates();
+        }
+        timetocheck = CTimer::m_snTimeInMilliseconds;
+    }
+}*/
 
 void CParticle::Update()
 {
@@ -2896,7 +2983,7 @@ void CParticle::Update()
                         if (vecPos.z <= point.m_vecPoint.z)
                         {
                             vecPos.z = point.m_vecPoint.z;
-                            if (psystem->m_Type == PARTICLE_DEBRIS2 || psystem->m_Type == PARTICLE_SNOW)
+                            if (psystem->m_Type == PARTICLE_DEBRIS2 || psystem->m_Type == PARTICLE_GUNSHELL_BUMP1 || psystem->m_Type == PARTICLE_GUNSHELL_BUMP2)
                             {
                                 particle->m_vecVelocity.x *= 0.8f;
                                 particle->m_vecVelocity.y *= 0.8f;
@@ -2981,7 +3068,18 @@ void CParticle::Update()
                             continue;
                         }
                         break;
-                        default: break;
+                        default:
+                            AddParticle(psystem->m_Type,
+                                CVector
+                                (
+                                    particle->m_vecPosition.x,
+                                    particle->m_vecPosition.y,
+                                    0.05f + particle->m_fZGround
+                                ),
+                                CVector(0.0f, 0.0f, CGeneral::GetRandomNumberInRange(0.03f, 0.06f)),
+                                nullptr,
+                                particle->m_fSize, color, 0, 0, 0, 0);
+                            break;
                         }
                     }
                 }
@@ -4684,7 +4782,7 @@ void Heli::DoHeliDustEffect(float timeConstMult, float fxMaxZMult) {
     CColPoint point;
     CEntity* entity;
     uint8_t r, g, b;
-    if (m_pDriver && m_nVehicleFlags.bEngineOn) {
+    if (m_pDriver && m_nVehicleFlags.bEngineOn && !m_nVehicleFlags.bEngineBroken) {
         float radius = (GetPosition().z - m_pDriver->GetPosition().z - 10.0f - 1.0f) * 0.3f + 10.0f;
         float ground = m_pDriver->GetPosition().z;
 
@@ -5020,20 +5118,73 @@ void CWeap::AddGunshell(CPed* creator, CVector& position, const CVector2D& direc
     CVector entityPosition = creator->GetPosition();
     RwRGBA color{};
     CVector diff = entityPosition - prevEntityPosition;
-    size = 0.02f;
+    auto WeaponType = creator->m_aWeapons[creator->m_nActiveWeaponSlot].m_eWeaponType;
+    auto WeaponInfo = GetInfo(creator);
+    if (size > 1.0f) size = 1.0f;
 
-    // Checking if it's a shotgun, if it is, set IsShotgun to true
-    switch (m_eWeaponType) {
+    // Checking if it's a shotgun, if it is, set IsShotgun to true. Also set gunshell size for other weapons.
+    switch (WeaponType) {
     case WEAPON_SHOTGUN:
     case WEAPON_SPAS12:
     case WEAPON_SAWNOFF:
         IsShotgun = true;
         break;
+    case WEAPON_MICRO_UZI:
+    case WEAPON_TEC9:
+    case WEAPON_MP5:
+        size = 0.015f;
+        IsShotgun = false;
+        break;
+    case WEAPON_AK47:
+    case WEAPON_M4:
+    case WEAPON_MINIGUN:
+        size = 0.02f;
+        IsShotgun = false;
+        break;
+    case WEAPON_PISTOL:
+    case WEAPON_PISTOL_SILENCED:
+    case WEAPON_DESERT_EAGLE:
+    case WEAPON_SNIPERRIFLE:
+        size = 0.015f;
+        IsShotgun = false;
+        break;
     default:
         IsShotgun = false;
         break;
     }
-
+    // Custom weapons support
+    switch (WeaponInfo->m_nAnimToPlay) {
+    case 19:
+    case 20:
+        if (WeaponInfo->m_nWeaponFire == WEAPON_FIRE_INSTANT_HIT)
+        size = 0.025f;
+        break;
+    case 45:
+        if (WeaponInfo->m_nWeaponFire == WEAPON_FIRE_INSTANT_HIT)
+        size = 0.015f;
+        break;
+    case 25:
+    case 26:
+        if (WeaponInfo->m_nWeaponFire == WEAPON_FIRE_INSTANT_HIT)
+        size = 0.02f;
+        break;
+    case 23:
+    case 24:
+        if (WeaponInfo->m_nWeaponFire == WEAPON_FIRE_INSTANT_HIT)
+        size = 0.015f;
+        break;
+    case 21:
+    case 22:
+    case 16:
+    case 17:
+        if (WeaponInfo->m_nWeaponFire == WEAPON_FIRE_INSTANT_HIT)
+        size = 0.02f;
+        break;
+    default:
+        if (WeaponInfo->m_nWeaponFire == WEAPON_FIRE_INSTANT_HIT)
+        size = 0.02f;
+        break;
+    }
     // Setting red color, if it's a shotgun
     if (IsShotgun) {
         color.red = 255;
@@ -5457,7 +5608,10 @@ void Veh::AddExhaustParticles() {
             if (((Vec)firstExhaustPos) != CVector(0.0f, 0.0f, 0.0f) || ((Vec)secondExhaustPos) != CVector(0.0f, 0.0f, 0.0f)) {
                 if (CGeneral::GetRandomNumberInRange(1.0f, 3.0f) * (m_fGasPedal + 1.1f) > fumesLimit) {
                     for (int i = 0; i < 4; i++) {
-                        if (m_nModelIndex == ModelIndex && i == 1 && m_fGasPedal > 0.9f) {
+                        if (!InitializedVehicle[m_nModelIndex]) {
+                            continue;  // Do not add fire exhaust if the vehicle is not initialized in INI file
+                        }
+                        if (/*m_nModelIndex == ModelIndex*/ ShouldHaveFireExhaust[m_nModelIndex] && i == 1 && m_fGasPedal > 0.9f) {
                             if (m_nCurrentGear == 1 || m_nCurrentGear == 3 && (CTimer::m_snTimeInMilliseconds % 1500) > 750) {
                                     CParticle::AddParticle(PARTICLE_FIREBALL, firstExhaustPos, dir1, NULL, 0.05f, 0, 0, 2, 200);
                                     CParticle::AddParticle(PARTICLE_FIREBALL, firstExhaustPos, dir1, NULL, 0.05f, 0, 0, 2, 200);
@@ -6686,67 +6840,51 @@ void Clouds::MovingFogRender() {
 }*/
 RwRGBA SmokeColor = { 0, 0, 0, 0 };
 
-
-bool initializedBASS = false;
-DWORD bassChannel = NULL;
-HSTREAM stream = 0;
-bool looped = true;
-bool trackIsPlaying = false;
-bool fileCheck(const char* name) {
-    struct stat buffer;
-    return (stat(name, &buffer) == 0);
-}
-
-bool checkChannel() {
-    return stream != 0 && bassChannel != NULL;
-}
-
-void setVolume(float volume) {
-    if (!checkChannel()) return;
-
-    BASS_ChannelSetAttribute(stream, BASS_ATTRIB_VOL, volume);
-}
-void playTrackBASS(const std::string& musicfile) {
-
-    if (musicfile == "") return;
-
-    if (!fileCheck(musicfile.c_str())) {
-        stream = 0;
-        return;
+// Nuclear explosion attempt
+void CreateNuclearExplosion(CVector position) {
+    // Bright flash
+    for (int i = 0; i < 10; ++i) {
+        CParticle::AddParticle(PARTICLE_GUNFLASH, position, CVector(0.0f, 0.0f, 0.0f), nullptr, 4.0f + i * 0.1f);
     }
 
-    if (!initializedBASS) {
-        initializedBASS = true;
-        bassChannel = NULL;
-        BASS_Init(-1, 44100, 0, RsGlobal.ps->window, nullptr);
+    // Fire ball
+    for (int i = 0; i < 50; ++i) {
+        float angle = CGeneral::GetRandomNumberInRange(0.0f, 2.0f * M_PI);
+        float distance = CGeneral::GetRandomNumberInRange(0.0f, 5.0f);
+        CVector offset(cos(angle) * distance, sin(angle) * distance, CGeneral::GetRandomNumberInRange(0.0f, 3.0f));
+        CVector velocity(cos(angle) * 2.0f, sin(angle) * 2.0f, 1.0f + CGeneral::GetRandomNumberInRange(0.0f, 2.0f));
+        CParticle::AddParticle(PARTICLE_EXPLOSION_LARGE, position + offset, velocity, nullptr, 3.0f);
     }
 
-    BASS_ChannelStop(bassChannel);
-
-    if (looped) {
-        stream = BASS_StreamCreateFile(FALSE, (musicfile).c_str(), 0, 0, BASS_SAMPLE_FLOAT | BASS_SAMPLE_LOOP);
+    // Uprising smoke
+    for (int i = 0; i < 100; ++i) {
+        float angle = CGeneral::GetRandomNumberInRange(0.0f, 2.0f * M_PI);
+        float distance = CGeneral::GetRandomNumberInRange(0.0f, 10.0f);
+        CVector offset(cos(angle) * distance, sin(angle) * distance, CGeneral::GetRandomNumberInRange(0.0f, 5.0f));
+        CVector velocity(cos(angle) * 0.5f, sin(angle) * 0.5f, 1.0f + CGeneral::GetRandomNumberInRange(0.0f, 2.0f));
+        CParticle::AddParticle(PARTICLE_GUNSMOKE2, position + offset, velocity, nullptr, 5.0f);
     }
-    else {
-        stream = BASS_StreamCreateFile(FALSE, (musicfile).c_str(), 0, 0, 0);
+
+    // The mushroom
+    for (int i = 0; i < 150; ++i) {
+        float angle = CGeneral::GetRandomNumberInRange(0.0f, 2.0f * M_PI);
+        float distance = CGeneral::GetRandomNumberInRange(5.0f, 15.0f);
+        float height = CGeneral::GetRandomNumberInRange(10.0f, 20.0f);
+        CVector offset(cos(angle) * distance, sin(angle) * distance, height);
+        CVector velocity(cos(angle) * 0.2f, sin(angle) * 0.2f, 0.5f);
+        CParticle::AddParticle(PARTICLE_GUNSMOKE2, position + offset, velocity, nullptr, 7.0f);
     }
 
-    if (stream != 0) {
-        bassChannel = stream;
-        BASS_ChannelPlay(bassChannel, FALSE);
-        trackIsPlaying = true;
+    // Smoke
+    for (int i = 0; i < 200; ++i) {
+        float angle = CGeneral::GetRandomNumberInRange(0.0f, 2.0f * M_PI);
+        float distance = CGeneral::GetRandomNumberInRange(10.0f, 20.0f);
+        float height = CGeneral::GetRandomNumberInRange(0.0f, 25.0f);
+        CVector offset(cos(angle) * distance, sin(angle) * distance, height);
+        CVector velocity(cos(angle) * 0.1f, sin(angle) * 0.1f, 0.2f);
+        CParticle::AddParticle(PARTICLE_SMOKE, position + offset, velocity, nullptr, 10.0f);
     }
 }
-
-void SetSoundPosition(float x, float y, float z) {
-    BASS_3DVECTOR pos(x,y,z);
-    BASS_ChannelSet3DPosition(stream, &pos, NULL, NULL);
-    BASS_Apply3D();
-}
-
-///////////////////////////////////////////////////////////////////////////
-
-float maxDistance = 100;
-float currentDistance = 5;
 
 class CParticleVC {
 public:
@@ -6970,6 +7108,7 @@ public:
 
         Events::gameProcessEvent += []() {
             CParticle::Update();
+          //  UpdateCheckHandler();
           //  CPlane2::UpdatePlanes();
 #ifdef GTA_SCENE_EDIT
             CSceneEdit::Update();
@@ -7101,6 +7240,11 @@ public:
             static int time = 0;
             if (TestExplosions && CTimer::m_snTimeInMilliseconds - time > 2000) {
                 time = CTimer::m_snTimeInMilliseconds;
+               // CVector pos;
+               // pos.x = 2486.120605f;
+               // pos.y = -1670.179932f;
+               // pos.z = 13.335947f;
+                //CreateNuclearExplosion(pos);
                 CExplosionVC::AddExplosion(nullptr, FindPlayerPed(), (eExplosionTypeVC)explosiontype, CVector(2486.120605f, -1670.179932f, 13.335947f), 5, 1, 1.5f, 0);
             }
             RwRGBA dropColor = { 0, 0, 0, 0 };
@@ -7354,6 +7498,7 @@ public:
             DebugMenuAddInt32("Particles", "Particles creation interval", &nParticleCreationInterval, nullptr, 1, 0, 20, nullptr);
             DebugMenuAddCmd("Particles", "Reload particle.cfg & .ini", CParticle::ReloadConfig);
             DebugMenuAddCmd("Particles", "Reload particleVC.txd", CParticle::ReloadTXD);
+          //  DebugMenuAddCmd("Particles", "Check for updates", CheckUpdates);
             DebugMenuAddCmd("Particles", "Remove all particle objects", CParticleObject::RemoveAllParticleObjects);
 #ifdef GTA_SCENE_EDIT
             DebugMenuAddVarBool8("Debug", "Scene Edit on", (int8_t*)&CSceneEdit::m_bEditOn, NULL);
@@ -7780,7 +7925,11 @@ public:
                     dir /= 2.0f;
                     weaptype = creator->m_aWeapons[creator->m_nActiveWeaponSlot].m_eWeaponType;
                     info = GetInfo(creator);
-                    if (weaptype == WEAPON_CHAINSAW) {
+                    if (weaptype == WEAPON_CHAINSAW 
+                        || info->m_nAnimToPlay == ANIM_GROUP_CSAW_1 
+                        || info->m_nAnimToPlay == ANIM_GROUP_PLAYERCSAW
+                        || info->m_nAnimToPlay == ANIM_GROUP_PLAYERCSAWF
+                        || info->m_nAnimToPlay == ANIM_GROUP_PLAYERCSAWM) {
                         if (ped->m_ePedState != PEDSTATE_DEAD && !((CTimer::m_FrameCounter + 17) & 1)
                             || ped->m_ePedState == PEDSTATE_DEAD && !((CTimer::m_FrameCounter + 17) & 3))
                         {
@@ -8246,8 +8395,18 @@ public:
             float a8,
             int a9) {
                 if (FootSplashesParticles) {
-                    for (int i = 0; i < 4; ++i) {
-                        CParticle::AddParticle(PARTICLE_SPLASH, (CVector&)*position, CVector(0.0f, 0.0f, 0.0f), NULL, 0.15f, RwRGBA(32, 32, 32, 32), 0, 0, GetRandomNumber() & 1, 200);
+                    CVector direction;
+                    for (int i = 0; i < CPools::ms_pPedPool->m_nSize; i++) {
+                        auto ped = CPools::ms_pPedPool->GetAt(i);
+                        if (ped) {
+                            direction = ped->GetForward() * -0.05f;
+                        }
+                    }
+                    for (int i = 0; i < 4; i++) {
+                        CVector adjustedPos = *(CVector*)position;
+                        adjustedPos.x += CGeneral::GetRandomNumberInRange(-0.1f, 0.1f);
+                        adjustedPos.y += CGeneral::GetRandomNumberInRange(-0.1f, 0.1f);
+                        CParticle::AddParticle(PARTICLE_RAIN_SPLASHUP, adjustedPos, direction, NULL, 0.15f, RwRGBA(32, 32, 32, 32), 0, 0, CGeneral::GetRandomNumber() & 1, 200);
                     }
                 }
          };

@@ -25,6 +25,7 @@ struct tParticleSystemData
 {
 	tParticleType m_Type;
 	char          m_aName[20];
+//	std::string	  m_aNamestd[20];
 	float         m_fCreateRange;
 	float         m_fDefaultInitialRadius;
 	float         m_fExpansionRate;
@@ -65,7 +66,7 @@ struct tParticleSystemData
 	RwRaster** m_ppRaster;
 	CParticle* m_pParticles;
 };
-VALIDATE_SIZE(tParticleSystemData, 0x94);
+VALIDATE_SIZE(tParticleSystemData, 148);
 
 class cParticleSystemMgr
 {
@@ -125,6 +126,7 @@ class cParticleSystemMgr
 
 public:
 	tParticleSystemData m_aParticles[MAX_PARTICLES];
+//	tParticleSystemData m_aParticlesINI[1024];
 
 	cParticleSystemMgr();
 
@@ -132,5 +134,5 @@ public:
 	void LoadParticleData();
 	void RangeCheck(tParticleSystemData* pData) { }
 };
-//VALIDATE_SIZE(cParticleSystemMgr, 0x2FFC);
+VALIDATE_SIZE(cParticleSystemMgr, 13320);
 extern cParticleSystemMgr mod_ParticleSystemManager;

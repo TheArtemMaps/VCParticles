@@ -505,7 +505,7 @@ CFireManagerVC::SetScriptFireAudio(int16_t index, bool state)
 class Fire {
 public:
 	Fire() {
-		Events::initGameEvent += []() {
+	//	Events::initGameEvent += []() {
 			//CExplosionVC::Initialise();
 			/*Memory::InjectHook(0x5393F0, &CFireVC::Extinguish, PATCH_JUMP);
 			Memory::InjectHook(0x53A570, &CFireVC::ProcessFire, PATCH_JUMP);
@@ -516,7 +516,7 @@ public:
 			Memory::InjectHook(0x5396E0, &CFireManagerVC::IsScriptFireExtinguish, PATCH_JUMP);
 			Memory::InjectHook(0x53A050, &CFireManagerVC::StartFireEnt, PATCH_JUMP);
 			Memory::InjectHook(0x539F00, &CFireManagerVC::StartFire, PATCH_JUMP);*/
-		};
+	//	};
 
 		//Events::gameProcessEvent += []() {
 		//	gFireManager.Update();

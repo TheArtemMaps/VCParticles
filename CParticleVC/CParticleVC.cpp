@@ -5593,10 +5593,12 @@ void Veh::AddExhaustParticles() {
     if (m_pHandlingData->m_transmissionData.m_nEngineType == 'D' && m_fGasPedal > 0.3f && DieselVehiclesBlackSmoke) {
         // If the current gear is greater than previous gear
         if (m_nCurrentGear > previousGear && m_nCurrentGear <= 5) {
-            // Add diesel particles!
-            CParticle::AddParticle(PARTICLE_ENGINE_SMOKE, firstExhaustPos, dir1, nullptr, 0.01f, 0, -1.0, 0, fLife);
-            // If the vehicle has a second exhaust, add smoke for it too!
-            if (bHasDoubleExhaust) {
+            // Add diesel smoke particles!
+            if (!bFirstExhaustSubmergedInWater) {
+                CParticle::AddParticle(PARTICLE_ENGINE_SMOKE, firstExhaustPos, dir1, nullptr, 0.01f, 0, -1.0, 0, fLife);
+            }
+            // If the vehicle has a second exhaust, add smoke for it too! Make sure it's not in the water too..
+            if (bHasDoubleExhaust && !bSecondExhaustSubmergedInWater) {
                 CParticle::AddParticle(PARTICLE_ENGINE_SMOKE, secondExhaustPos, dir1, nullptr, 0.01f, 0, -1.0, 0, fLife);
             }
         }
@@ -5616,9 +5618,11 @@ void Veh::AddExhaustParticles() {
                         }
                         if (/*m_nModelIndex == ModelIndex*/ ShouldHaveFireExhaust[m_nModelIndex] && i == 1 && m_fGasPedal > 0.9f) {
                             if (m_nCurrentGear == 1 || m_nCurrentGear == 3 && (CTimer::m_snTimeInMilliseconds % 1500) > 750) {
+                                if (!bFirstExhaustSubmergedInWater) {
                                     CParticle::AddParticle(PARTICLE_FIREBALL, firstExhaustPos, dir1, NULL, 0.05f, 0, 0, 2, 200);
                                     CParticle::AddParticle(PARTICLE_FIREBALL, firstExhaustPos, dir1, NULL, 0.05f, 0, 0, 2, 200);
-                                    if (bHasDoubleExhaust) {
+                                }
+                                    if (bHasDoubleExhaust && !bSecondExhaustSubmergedInWater) {
                                         CParticle::AddParticle(PARTICLE_FIREBALL, secondExhaustPos, dir1, NULL, 0.05f, 0, 0, 2, 200);
                                         CParticle::AddParticle(PARTICLE_FIREBALL, secondExhaustPos, dir1, NULL, 0.05f, 0, 0, 2, 200);
                                     }
@@ -5629,12 +5633,15 @@ void Veh::AddExhaustParticles() {
                                 if (DotProduct(GetForward(), camDist) > 0.0f ||
                                     TheCamera.GetLookDirection() == 1 ||
                                     TheCamera.GetLookDirection() == 2) {
-                                    CParticle::AddParticle(PARTICLE_HEATHAZE, firstExhaustPos, CVector(0.0f, 0.0f, 0.0f));
-                                    if (bHasDoubleExhaust)
+                                    if (!bFirstExhaustSubmergedInWater) {
+                                        CParticle::AddParticle(PARTICLE_HEATHAZE, firstExhaustPos, CVector(0.0f, 0.0f, 0.0f));
+                                    }
+                                    if (bHasDoubleExhaust && !bSecondExhaustSubmergedInWater)
                                         CParticle::AddParticle(PARTICLE_HEATHAZE, secondExhaustPos, CVector(0.0f, 0.0f, 0.0f));
-
-                                    CParticle::AddParticle(PARTICLE_HEATHAZE, firstExhaustPos, CVector(0.0f, 0.0f, 0.0f));
-                                    if (bHasDoubleExhaust)
+                                    if (!bFirstExhaustSubmergedInWater) {
+                                        CParticle::AddParticle(PARTICLE_HEATHAZE, firstExhaustPos, CVector(0.0f, 0.0f, 0.0f));
+                                    }
+                                    if (bHasDoubleExhaust && !bSecondExhaustSubmergedInWater)
                                         CParticle::AddParticle(PARTICLE_HEATHAZE, secondExhaustPos, CVector(0.0f, 0.0f, 0.0f));
                                 }
                             }

@@ -4778,14 +4778,17 @@ AddParticles(void)
 // 0x6B0690
 void Heli::DoHeliDustEffect(float timeConstMult, float fxMaxZMult) {
     int i;
-    float angle;
+    float angle, radius{}, ground{};
     CColPoint point;
     CEntity* entity;
     uint8_t r, g, b;
-    if (m_pDriver && m_nVehicleFlags.bEngineOn && !m_nVehicleFlags.bEngineBroken) {
-        float radius = (GetPosition().z - m_pDriver->GetPosition().z - 10.0f - 1.0f) * 0.3f + 10.0f;
-        float ground = m_pDriver->GetPosition().z;
-
+   // log("WheelSpeed[1]: %f", m_fWheelSpeed[1]);
+   // log("RotorZ: %4.0f SecondRotor: %4.0f", m_fRotorZ, m_fSecondRotorZ);
+    if (m_fWheelSpeed[1] > 0.1f) {
+        if (m_pDriver) {
+             radius = (GetPosition().z - m_pDriver->GetPosition().z - 10.0f - 1.0f) * 0.3f + 10.0f;
+             ground = m_pDriver->GetPosition().z;
+        }
         int rnd = max(16.0f - 4.0f * CTimer::ms_fTimeStep, 2.0f);
         uint8_t surface = SURFACE_TARMAC;
         int frm = CTimer::m_FrameCounter & 7;

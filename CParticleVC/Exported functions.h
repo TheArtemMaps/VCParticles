@@ -24,8 +24,12 @@ void __cdecl RemovePSystem(int particlesystem) {
     return ((void(__cdecl*)(int))GetExportedFunction("RemoveParticle"))(particlesystem);
 }
 
-void __cdecl AddParticleObject(uint8_t ParticleObjectType, float x, float y, float z, float strengthX, float strengthY, float strengthZ, float scale, RwUInt8 r, RwUInt8 g, RwUInt8 b, RwUInt8 a, int durationInMs, bool remove) {
-    return ((void(__cdecl*)(uint8_t, float, float, float, float, float, float, float, RwUInt8, RwUInt8, RwUInt8, RwUInt8, int, bool))GetExportedFunction("AddParticleObject"))(ParticleObjectType, x, y, z, strengthX, strengthY, strengthZ, scale, r, g, b, a, durationInMs, remove);
+void __cdecl RemovePObject(int PObjectHandle) {
+    return ((void(__cdecl*)(int))GetExportedFunction("RemovePObject"))(PObjectHandle);
+}
+
+void __cdecl AddParticleObject(uint8_t ParticleObjectType, float x, float y, float z, float strengthX, float strengthY, float strengthZ, float scale, RwUInt8 r, RwUInt8 g, RwUInt8 b, RwUInt8 a, uint32_t durationInMs, bool remove) {
+    return ((void(__cdecl*)(uint8_t, float, float, float, float, float, float, float, RwUInt8, RwUInt8, RwUInt8, RwUInt8, uint32_t, bool))GetExportedFunction("AddParticleObject"))(ParticleObjectType, x, y, z, strengthX, strengthY, strengthZ, scale, r, g, b, a, durationInMs, remove);
 }
 
 void __cdecl RemoveParticleObjectsInArea(float x1, float y1, float z1, float x2, float y2, float z2) {
@@ -54,4 +58,19 @@ void __cdecl UpdateBoatFoamAnimationEx(int ObjectHandle) {
 
 void __cdecl AddYardieDoorSmoke(CVector& vecPos, int ObjectHandle) {
     return ((void(__cdecl*)(CVector&, int))GetExportedFunction("AddYardieDoorSmoke"))(vecPos, ObjectHandle);
+}
+
+/*void __cdecl AddParticleAttachedToAObject(int type, float xoffset, float yoffset, float zoffset, float xdir, float ydir, float zdir, float fSize, RwUInt8 r, RwUInt8 g, RwUInt8 b, RwUInt8 a, int32_t LifeSpan, int ObjectHandle) {
+    return ((void(__cdecl*)(int, float, float, float, float, float, float, float, RwUInt8, RwUInt8, RwUInt8, RwUInt8, int32_t, int))GetExportedFunction("AddParticleAttachedToAObject"))(type, xoffset, yoffset, zoffset, xdir, ydir, zdir, fSize, r, g, b, a, LifeSpan, ObjectHandle);
+}
+
+void __cdecl AddParticleAttachedToAVehicle(int type, float xoffset, float yoffset, float zoffset, float xdir, float ydir, float zdir, float fSize, RwUInt8 r, RwUInt8 g, RwUInt8 b, RwUInt8 a, int32_t LifeSpan, int VehicleHandle) {
+    return ((void(__cdecl*)(int, float, float, float, float, float, float, float, RwUInt8, RwUInt8, RwUInt8, RwUInt8, int32_t, int))GetExportedFunction("AddParticleAttachedToAVehicle"))(type, xoffset, yoffset, zoffset, xdir, ydir, zdir, fSize, r, g, b, a, LifeSpan, VehicleHandle);
+}*/
+
+void __cdecl LogExport(const char* msg, ...) {
+    va_list args;
+    va_start(args, msg);
+    return ((void(__cdecl*)(const char*, ...))GetExportedFunction("LogExport"))(msg, args);
+    va_end(args);
 }

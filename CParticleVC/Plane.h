@@ -31,7 +31,7 @@ struct CPlaneInterpolationLine
 	float acceleration;
 };
 
-class CPlane2 : public CVehicle
+class CPlane2 : public CAutomobile
 {
 public:
 #ifdef CPLANE_ROTORS

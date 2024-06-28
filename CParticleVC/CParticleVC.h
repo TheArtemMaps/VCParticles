@@ -1,5 +1,13 @@
 #pragma once
 #include "ParticleMgr.h"
+enum eParticleSwitch
+{
+	PS_ORIGINAL = 0,
+	PS_PS2,
+	PS_XBOX,
+	PS_XBOX2,
+	PS_MAX,
+};
 class CEntity;
 class CParticle
 {
@@ -95,6 +103,30 @@ public:
 	static void HandleShootableBirdsStuff2(CEntity* entity, const CVector* pointA, const CVector* pointB);
 };
 
+class CParticleEx
+{
+	static eParticleSwitch m_eCurrentParticle;
+	static eParticleSwitch m_eCurrentParticleV;
+
+public:
+
+	static bool m_bUseOriginalSystem;
+
+
+	static void ClearPSystem(eParticleSwitch s);
+	static void UpdatePObjects(eParticleSwitch s);
+
+	static void SetParticleSwitch(eParticleSwitch s);
+
+	static eParticleSwitch GetCurrentParticle() { return m_eCurrentParticleV; }
+	static eParticleSwitch GetCurrentParticleReal() { return m_eCurrentParticle; }
+
+	static bool IsOrig() { return GetCurrentParticle() == PS_ORIGINAL; }
+	static bool IsPS2() { return GetCurrentParticle() == PS_PS2; }
+	static bool IsXbox() { return GetCurrentParticle() == PS_XBOX; }
+	static bool IsXbox2() { return GetCurrentParticle() == PS_XBOX2; }
+};
+
 class CSpecialParticleStuff {
 	static uint32_t BoatFromStart;
 public:
@@ -114,5 +146,6 @@ extern RwRaster* gpRainDripDarkRaster[];
 extern RwTexture* coronaringa;
 extern bool ExplosionsParticles;
 extern bool WaterDrops;
+extern bool ParticleExEffects;
 
 VALIDATE_SIZE(CParticle, 0x58);

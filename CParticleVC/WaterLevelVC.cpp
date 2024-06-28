@@ -22,6 +22,7 @@
 #include "Utility.h"
 #include <game_sa/CGame.h>
 #include "CParticleVC.h"
+using namespace std;
 using namespace plugin;
 //#define PS2
 ThiscallEvent <AddressList<0x53E175, H_CALL>, PRIORITY_AFTER, ArgPickNone, void()> RenderEffectsEvent22;
@@ -3400,7 +3401,7 @@ CWaterLevel::CreateBeachToy(CVector const& vec, eBeachToy beachtoy)
 	else
 		return NULL;
 }*/
-/*class VCWaterSA {
+class VCWaterSA {
 public:
 	VCWaterSA() {
 		// Добавьте здесь код инициализации плагина
@@ -3419,4 +3420,4 @@ public:
 			CWaterLevel::RenderTransparentWater();
 		};
 	}
-} vCWaterSA;*/
+} vCWaterSA;

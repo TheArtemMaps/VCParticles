@@ -30,6 +30,7 @@ enum eParticleObjectType
 	POBJECT_EXPLOSION_ONCE,
 	POBJECT_CATALINAS_GUNFLASH,
 	POBJECT_CATALINAS_SHOTGUNFLASH,
+	POBJECT_UNKNOWN = -1 // If user made a typo in a CLEO script, return this...
 };
 
 enum eParticleObjectState
@@ -90,6 +91,30 @@ public:
 	static void RemoveAllExpireableParticleObjects(void);
 	static void RemoveAllParticleObjects(void);
 	static void MoveToList(CParticleObject** from, CParticleObject** to, CParticleObject* obj);
+	static const char* ParticleObjectTypeToString(uint16_t type);
+	static const char* ParticleObjectStateToString(uint16_t type);
 };
 
+/*class CParticleObjectPool : public CPool<CParticleObject> {
+public:
+	CParticleObjectPool(int maxSize) : CPool(maxSize, "ParticleObjectPool") {}
+};
+
+extern CParticleObjectPool gParticleObjectPool;*/
+
 extern CParticleObject gPObjectArray[MAX_PARTICLEOBJECTS];
+
+class CAudioHydrant
+{
+public:
+	int32_t AudioEntity;
+	CParticleObject* pParticleObject;
+
+	CAudioHydrant() :
+		AudioEntity(0),
+		pParticleObject(NULL)
+	{ }
+
+	static bool Add(CParticleObject* particleobject);
+	static void Remove(CParticleObject* particleobject);
+};

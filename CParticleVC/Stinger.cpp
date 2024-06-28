@@ -24,6 +24,7 @@ CStingerSegment::CStingerSegment() : CObject(*this)
 	//buyoancy = GAME_GRAVITY * m_fMass * 0.1f;
 	m_nPhysicalFlags.bExplosionProof = true;
 	SetModelIndex(MODEL_TEMP_STINGER);
+	log("Constructor");
 	//ObjectCreatedBy = CONTROLLED_SUB_OBJECT;
 	NumOfStingerSegments++;
 }
@@ -31,6 +32,7 @@ CStingerSegment::CStingerSegment() : CObject(*this)
 CStingerSegment::~CStingerSegment()
 {
 	NumOfStingerSegments--;
+	log("Destructor");
 }
 
 /* --  CStinger  -- */
@@ -196,7 +198,7 @@ CStinger::Process()
 	case STINGERSTATE_NONE:
 		if (pOwner != NULL
 			&& !pOwner->m_nPedFlags.bInVehicle
-			&& pOwner->m_ePedState == PEDSTATE_DEPLOY_STINGER
+			/*&& pOwner->m_ePedState == PEDSTATE_DEPLOY_STINGER*/
 			&& RpAnimBlendClumpGetAssociation(pOwner->m_pRwClump, ANIM_GRENADE_WEAPON_THROWU)->m_fCurrentTime > 0.39f && m_pStinger)
 		{
 			m_nSpikeState = STINGERSTATE_DEPLOYING;
@@ -214,6 +216,7 @@ CStinger::Process()
 		if (CTimer::m_snTimeInMilliseconds > m_nTimeOfDeploy + 2500)
 			m_nSpikeState = STINGERSTATE_REMOVE;
 		// no break
+		break;
 	case STINGERSTATE_DEPLOYING:
 		if (m_nSpikeState == STINGERSTATE_DEPLOYING && CTimer::m_snTimeInMilliseconds > m_nTimeOfDeploy + 2500)
 			m_nSpikeState = STINGERSTATE_DEPLOYED;
@@ -268,7 +271,7 @@ void CStinger::ProcessStingerCop(CPed* ped) {
 		//	m_pStinger->Process();
 		//}
 		//else {
-			if (ped && FindPlayerVehicle(-1, false) && m_pStinger) {
+			if (ped && ped->m_nPedType == PED_TYPE_COP && FindPlayerVehicle(-1, false) && m_pStinger) {
 				CVector2D vehDist = ped->GetPosition() - FindPlayerVehicle(-1, false)->GetPosition();
 				CVector2D dirVehGoing = FindPlayerVehicle(-1, false)->m_vecMoveSpeed;
 				if (vehDist.MagnitudeSqr() < sq(30.0f)) {
@@ -301,19 +304,23 @@ void CStinger::ProcessStingerCop(CPed* ped) {
 class Stinger {
 public:
 	Stinger() {
-		Events::initGameEvent += []() {
+		Events::initRwEvent += []() {
 			m_pStinger = new CStinger();
 		};
-		//Events::gameProcessEvent += []() {
-			//if (m_pStinger && m_pStinger->bIsDeployed && m_pStinger->m_nSpikeState == STINGERSTATE_DEPLOYED && CGame::currArea != 0)
-			//	m_pStinger->Process();
+		Events::gameProcessEvent += []() {
+			if (m_pStinger && m_pStinger->bIsDeployed && m_pStinger->m_nSpikeState == STINGERSTATE_DEPLOYED)
+				m_pStinger->Process();
 		//	if (KeyPressed(VK_F9))
 			//m_pStinger->Deploy(FindPlayerPed());
-		//};
+		};
 			Events::pedRenderEvent += [](CPed* ped) {
 				if (ped && m_pStinger) {
 					CStinger::ProcessStingerCop(ped);
 				}
+			//	if (m_pStinger)
+				//	debug("ok");
+				//else
+				//	debug("not ok");
 			
 		};
 	}

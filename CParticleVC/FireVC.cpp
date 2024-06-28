@@ -15,7 +15,8 @@
 #include "CGameLogic.h"
 #include "CCarAI.h"
 #include <game_sa/CModelInfo.h>
-#include "M:/My Projects/VCMarkersSA/VCMarkersSA/MemoryMgr.h"
+#include "MemoryMgr.h"
+using namespace std;
 
 CFireManagerVC gFireManager;
 
@@ -111,7 +112,7 @@ CFireVC::ProcessFire(void)
 		!FindPlayerPed()->m_pFire && !(FindPlayerPed()->m_nPhysicalFlags.bFireProof)
 		&& (static_cast<Vec>((FindPlayerPed()->GetPosition() - m_vecPos)).MagnitudeSqr() < 2.0f)) {
 		FindPlayerPed()->DoStuffToGoOnFire();
-		gFireManager.StartFireEnt(FindPlayerPed(), m_pSource, 0.8f, 1);
+		gFireManager.StartFireEnt(FindPlayerPed(), m_pSource, 0.8f, 1, 0, 0);
 	}
 	if (CTimer::m_snTimeInMilliseconds > m_nNextTimeToAddFlames) {
 		m_nNextTimeToAddFlames = CTimer::m_snTimeInMilliseconds + (m_fWaterExtinguishCountdown < 0.3f ? 400 : (m_fWaterExtinguishCountdown < 0.7f ? 200 : 80));
@@ -201,7 +202,7 @@ CFireVC::Extinguish(void)
 }
 
 void
-CFireManagerVC::StartFire(CVector pos, float size, uint8_t propagation)
+CFireManagerVC::StartFire(CVector pos, float size, uint8 propagation, CEntity* creator, uint32 nTimeToBurn, int8 nGenerations, uint8 unused_)
 {
 	CFireVC *fire = GetNextFreeFire();
 
@@ -223,16 +224,16 @@ CFireManagerVC::StartFire(CVector pos, float size, uint8_t propagation)
 }
 
 CFireVC *
-CFireManagerVC::StartFireEnt(CEntity *entityOnFire, CEntity *fleeFrom, float strength, uint8_t propagation)
+CFireManagerVC::StartFireEnt(CEntity* target, CEntity* creator, float size, uint8 propagation, uint32 lifetime, int8 numGenerations)
 {
-	CPed *ped = (CPed *)entityOnFire;
-	CVehicle *veh = (CVehicle *)entityOnFire;
-	if (entityOnFire->m_nType == ENTITY_TYPE_PED) {
+	CPed *ped = (CPed *)target;
+	CVehicle *veh = (CVehicle *)target;
+	if (target->m_nType == ENTITY_TYPE_PED) {
 		if (ped->m_pFire)
 			return NULL;
 		if (!ped->IsPedInControl())
 			return NULL;
-	} else if (entityOnFire->m_nType == ENTITY_TYPE_VEHICLE) {
+	} else if (target->m_nType == ENTITY_TYPE_VEHICLE) {
 		if (veh->m_pFire)
 			return NULL;
 		if (veh->m_nVehicleSubClass == VEHICLE_AUTOMOBILE &&  ((CAutomobile *)veh)->m_damageManager.GetEngineStatus() >= 225)
@@ -241,24 +242,24 @@ CFireManagerVC::StartFireEnt(CEntity *entityOnFire, CEntity *fleeFrom, float str
 	CFireVC *fire = GetNextFreeFire();
 
 	if (fire) {
-		if (entityOnFire->m_nType == ENTITY_TYPE_PED) {
+		if (target->m_nType == ENTITY_TYPE_PED) {
 			//ped->m_pFire = fire;
 			if (ped != FindPlayerPed()) {
-				if (fleeFrom) {
+				//if (fleeFrom) {
 					//ped->SetFlee(fleeFrom, 10000);
-					;
-				} else {
-					CVector2D pos = entityOnFire->GetPosition();
+				//	;
+				//} else {
+					CVector2D pos = target->GetPosition();
 					//ped->SetFlee(pos, 10000);
 					//ped->m_fleeFrom = NULL;
-				}
+				//}
 				//ped->fleet = CTimer::GetTimeInMilliseconds() + 10000;
 				ped->m_bDrawLast = false;
 				ped->SetMoveState(PEDMOVE_SPRINT);
 				ped->SetMoveAnim();
 				ped->SetPedState(PEDSTATE_ON_FIRE);
 			}
-			if (fleeFrom) {
+		//	if (fleeFrom) {
 				//if (ped->m_nPedType == PEDTYPE_COP) {
 				//	CEventList::RegisterEvent(EVENT_COP_SET_ON_FIRE, EVENT_ENTITY_PED,
 				//		entityOnFire, (CPed *)fleeFrom, 10000);
@@ -266,10 +267,10 @@ CFireManagerVC::StartFireEnt(CEntity *entityOnFire, CEntity *fleeFrom, float str
 				//	CEventList::RegisterEvent(EVENT_PED_SET_ON_FIRE, EVENT_ENTITY_PED,
 					//	entityOnFire, (CPed *)fleeFrom, 10000);
 				//}
-				;
-			}
+			//	;
+			//}
 		} else {
-			if (entityOnFire->m_nType == ENTITY_TYPE_VEHICLE) {
+			if (target->m_nType == ENTITY_TYPE_VEHICLE) {
 				//veh->fire = fire;
 				if (CModelInfo::IsBikeModel(veh->m_nModelIndex) || CModelInfo::IsCarModel(veh->m_nModelIndex))
         				CCarAI::TellOccupantsToLeaveCar(veh);
@@ -284,26 +285,26 @@ CFireManagerVC::StartFireEnt(CEntity *entityOnFire, CEntity *fleeFrom, float str
 		fire->m_bIsOngoing = true;
 		fire->m_bExtinguishedWithWater = false;
 		fire->m_bIsScriptFire = false;
-		fire->m_vecPos = entityOnFire->GetPosition();
+		fire->m_vecPos = target->GetPosition();
 
-		if (entityOnFire && entityOnFire->m_nType == ENTITY_TYPE_PED && ped->IsPlayer()) {
+		if (target && target->m_nType == ENTITY_TYPE_PED && ped->IsPlayer()) {
 			fire->m_nExtinguishTime = CTimer::m_snTimeInMilliseconds + 3333;
-		} else if (entityOnFire->m_nType == ENTITY_TYPE_VEHICLE) {
+		} else if (target->m_nType == ENTITY_TYPE_VEHICLE) {
 			fire->m_nExtinguishTime = CTimer::m_snTimeInMilliseconds + CGeneral::GetRandomNumberInRange(4000, 5000);
 		} else {
 			fire->m_nExtinguishTime = CTimer::m_snTimeInMilliseconds + CGeneral::GetRandomNumberInRange(10000, 11000);
 		}
 		fire->m_nStartTime = CTimer::m_snTimeInMilliseconds + 400;
-		fire->m_pEntity = entityOnFire;
+		fire->m_pEntity = target;
 
-		entityOnFire->RegisterReference(&fire->m_pEntity);
-		fire->m_pSource = fleeFrom;
+		target->RegisterReference(&fire->m_pEntity);
+		fire->m_pSource = creator;
 
-		if (fleeFrom)
-			fleeFrom->RegisterReference(&fire->m_pSource);
+		if (creator)
+			creator->RegisterReference(&fire->m_pSource);
 		fire->ReportThisFire();
 		fire->m_nNextTimeToAddFlames = 0;
-		fire->m_fStrength = strength;
+		fire->m_fStrength = size;
 		fire->m_bPropagationFlag = propagation;
 		fire->m_bAudioSet = true;
 	}
@@ -319,7 +320,7 @@ CFireManagerVC::Update(void)
 	}
 }
 
-CFireVC* CFireManagerVC::FindNearestFire(CVector vecPos, float *pDistance)
+CFireVC* CFireManagerVC::FindNearestFire(const CVector& point, bool bCheckIsBeingExtinguished, bool bCheckWasCreatedByScript)
 {
 	int fireId = -1;
 	float minDistance = 999999;
@@ -328,13 +329,13 @@ CFireVC* CFireManagerVC::FindNearestFire(CVector vecPos, float *pDistance)
 			continue;
 		if (m_aFires[j].m_bIsScriptFire)
 			continue;
-		float distance = (m_aFires[j].m_vecPos - vecPos).Magnitude2D();
+		float distance = (m_aFires[j].m_vecPos - point).Magnitude2D();
 		if (distance < minDistance) {
 			minDistance = distance;
 			fireId = j;
 		}
 	}
-	*pDistance = minDistance;
+	//*pDistance = minDistance;
 	if (fireId != -1)
 		return &m_aFires[fireId];
 
@@ -391,7 +392,7 @@ CFireManagerVC::ExtinguishPoint(CVector point, float range)
 }
 
 bool
-CFireManagerVC::ExtinguishPointWithWater(CVector point, float range)
+CFireManagerVC::ExtinguishPointWithWater(CVector point, float range, float fWaterStrength)
 {
     int i;
     for (i = 0; i < NUM_FIRES;) {
@@ -419,7 +420,7 @@ CFireManagerVC::ExtinguishPointWithWater(CVector point, float range)
 }
 
 int32_t
-CFireManagerVC::StartScriptFire(const CVector &pos, CEntity *target, float strength, uint8_t propagation)
+CFireManagerVC::StartScriptFire(const CVector& pos, CEntity* target, float strength, uint8 propagation, int8 nGenerations, int32 nStrength)
 {
 	CFireVC *fire;
 	CPed *ped = (CPed *)target;
@@ -505,9 +506,9 @@ CFireManagerVC::SetScriptFireAudio(int16_t index, bool state)
 class Fire {
 public:
 	Fire() {
-	//	Events::initGameEvent += []() {
+		/*Events::initRwEvent += []() {
 			//CExplosionVC::Initialise();
-			/*Memory::InjectHook(0x5393F0, &CFireVC::Extinguish, PATCH_JUMP);
+			Memory::InjectHook(0x5393F0, &CFireVC::Extinguish, PATCH_JUMP);
 			Memory::InjectHook(0x53A570, &CFireVC::ProcessFire, PATCH_JUMP);
 			Memory::InjectHook(0x53AF00, &CFireManagerVC::Update, PATCH_JUMP);
 			Memory::InjectHook(0x53A270, &CFireManagerVC::StartScriptFire, PATCH_JUMP);
@@ -515,8 +516,9 @@ public:
 			Memory::InjectHook(0x5394C0, &CFireManagerVC::ExtinguishPointWithWater, PATCH_JUMP);
 			Memory::InjectHook(0x5396E0, &CFireManagerVC::IsScriptFireExtinguish, PATCH_JUMP);
 			Memory::InjectHook(0x53A050, &CFireManagerVC::StartFireEnt, PATCH_JUMP);
-			Memory::InjectHook(0x539F00, &CFireManagerVC::StartFire, PATCH_JUMP);*/
-	//	};
+			Memory::InjectHook(0x539F00, &CFireManagerVC::StartFire, PATCH_JUMP);
+			Memory::InjectHook(0x538F40, &CFireManagerVC::FindNearestFire, PATCH_JUMP);
+		};*/
 
 		//Events::gameProcessEvent += []() {
 		//	gFireManager.Update();

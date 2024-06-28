@@ -1,4 +1,6 @@
 #pragma once
+#include "CDraw.h"
+#include "CCamera.h"
 class CSprite2
 {
 	static float m_f2DNearScreenZ;
@@ -6,6 +8,26 @@ class CSprite2
 	static float m_fRecipNearClipPlane;
 	static int32_t m_bFlushSpriteBufferSwitchZTest;
 public:
+	// Version with removed camera draw distance for particles
+	static bool CalcScreenCoors(const CVector& posn, CVector& out, float& w, float& h, bool checkMaxVisible, float lim)
+	{
+		float InverseZ;
+		out = TheCamera.m_mViewMatrix * posn;
+
+		if (checkMaxVisible) {
+			if (out.z <= lim || out.z >= CDraw::ms_fFarClipZ)
+				return false;
+		}
+
+		InverseZ = 1.0f / out.z;
+		out.x = SCREEN_WIDTH * InverseZ * out.x;
+		out.y = SCREEN_HEIGHT * InverseZ * out.y;
+		w = SCREEN_WIDTH * InverseZ;
+		h = SCREEN_HEIGHT * InverseZ;
+		w = w / CDraw::ms_fFOV * 70.0f;
+		h = h / CDraw::ms_fFOV * 70.0f;
+		return true;
+	}
 	static void FlushSpriteBuffer(void);
 	static void InitSpriteBuffer(void);
 	static void InitSpriteBuffer2D(void);

@@ -14,6 +14,7 @@
 #include <CStreaming.h>
 #include "CClouds.h"
 #include "MemoryMgr.h"
+#include "CBoat.h"
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
@@ -31,7 +32,15 @@ inline CVector MultiplyInverse(const CMatrix& mat, const CVector& vec)
         mat.GetForward().x * v.x + mat.GetForward().y * v.y + mat.GetForward().z * v.z,
         mat.up.x * v.x + mat.up.y * v.y + mat.up.z * v.z);
 }
-#define Clamp2(v, center, radius) ((v) > (center) ? min(v, center + radius) : max(v, center - radius))
+#define Clamp2(v, center, radius) ((v) > (center) ? std::min(v, center + radius) : std::max(v, center - radius))
+#ifdef USE_PS2_RAND
+#define MYRAND_MAX		65535
+#else
+#define MYRAND_MAX		32767
+#endif
+
+int myrand(void);
+#define AUDIO_OAL 1
 using namespace plugin;
 #define PERCENT(x, p)                    ((float(x) * (float(p) / 100.0f)))
 #define ARRAY_SIZE(array)                (sizeof(array) / sizeof(array[0]))
@@ -207,6 +216,28 @@ inline CVector2D operator*(const CVector2D& left, float right)
     return CVector2D(left.x * right, left.y * right);
 }
 
+inline CVector2D operator+(const CVector2D& rhs, const CVector2D& rhs2) {
+    return CVector2D(rhs2.x + rhs.x, rhs2.y + rhs.y);
+}
+typedef uint8_t uint8;
+typedef int8_t int8;
+typedef uint16_t uint16;
+typedef int16_t int16;
+#ifndef __MWERKS__
+typedef uint32_t uint32;
+typedef int32_t int32;
+#else
+typedef unsigned int uint32;
+typedef int int32;
+#endif
+typedef uintptr_t uintptr;
+typedef intptr_t intptr;
+typedef uint64_t uint64;
+typedef int64_t int64;
+#define nil NULL
+#define Const const
+#define Min std::min
+#define Max std::max
 inline float
 Distance(const CVector& v1, const CVector& v2)
 {
@@ -236,15 +267,20 @@ class Vec2D : public CVector2D {
 public:
     void Normalise(void) {
         float sq = MagnitudeSqr();
-        // assert(sq != 0.0f);	// just be safe here
-        float invsqrt = RecipSqrt(sq);
-        x *= invsqrt;
-        y *= invsqrt;
+        if (sq > 0.0f) {
+            float invsqrt = RecipSqrt(sq);
+            x *= invsqrt;
+            y *= invsqrt;
+        }
+        else
+            x = 1.0f;
     }
-    float MagnitudeSqr(void) const { return x * x + y * y; }
     inline void operator*=(CVector2D multiplier) {
         x *= multiplier.x;
         y *= multiplier.y;
+    }
+    CVector2D operator+(const CVector2D& rhs) const {
+        return CVector2D(x + rhs.x, y + rhs.y);
     }
 };
 class Vec : public CVector
@@ -260,6 +296,7 @@ public:
         x *= invsqrt;
         y *= invsqrt;
     }
+    bool IsZero(void) const { return x == 0.0f && y == 0.0f && z == 0.0f; }
     auto Normalized() const->CVector;
     CVector operator-() const {
         return CVector(-x, -y, -z);
@@ -317,6 +354,7 @@ public:
     void ProcessHarvester();
     void StopNitroEffect();
     void DoNitroEffect(float power);
+    void AddDamagedVehicleParticles();
     void ProcessCarOnFireAndExplode(bool bExplodeImmediately);
     int32_t AddWheelDirtAndWater(CColPoint* colpoint, uint32_t belowEffectSpeed);
 };
@@ -360,7 +398,7 @@ public:
 constexpr inline bool operator==(const CVector& vec, float equalTo) {
     return vec.x == equalTo && vec.y == equalTo && vec.z == equalTo;
 }
-class Veh : public CVehicle {
+class Veh : public CBoat {
 public:
     void AddExhaustParticles();
     void AddWaterSplashParticles();
@@ -425,18 +463,27 @@ public:
 class Ped : public CPed {
 public:
     void PlayFootSteps();
+    void SetEvasiveDive(CPhysical* reason, uint8 onlyRandomJump);
+    static void PedEvadeCB(CAnimBlendAssociation* animAssoc, void* arg);
+};
+
+class PlayerPed : public CPlayerPed {
+public:
+    int32_t m_nEvadeAmount;
+    CPhysical* m_pEvadingFrom;
 };
 
 class CWeap : public CWeapon {
 public:
     void AddGunshell(CPed* creator, CVector& position, const CVector2D& direction, float size);
     bool FireMelee(CEntity* shooter, CVector& fireSource);
-    void DoBulletImpact(CEntity* shooter, CEntity* victim,
-            CVector* source, CVector* target, CColPoint* point, CVector2D ahead);
+  //  void DoBulletImpact(CEntity* shooter, CEntity* victim,
+   //         CVector* source, CVector* target, CColPoint* point, CVector2D ahead);
     void DoWeaponEffect(CVector origin, CVector dir);
+    bool FireInstantHit(CEntity* shooter, CVector* fireSource);
      bool FireSniper(CPed* shooter, CEntity* victim, CVector* target);
-  static bool ProcessLineOfSight(const CVector& startPoint, const CVector& endPoint, CColPoint& outColPoint, CEntity*& outEntity, eWeaponType weaponType, CEntity* arg5,
-        bool buildings, bool vehicles, bool peds, bool objects, bool dummies, bool arg11, bool doIgnoreCameraCheck);
+ // static bool ProcessLineOfSight(const CVector& startPoint, const CVector& endPoint, CColPoint& outColPoint, CEntity*& outEntity, eWeaponType weaponType, CEntity* arg5,
+   //     bool buildings, bool vehicles, bool peds, bool objects, bool dummies, bool arg11, bool doIgnoreCameraCheck);
 };
 inline float DistanceBetweenPointsSquared(const CVector& pointOne, const CVector& pointTwo) {
     return static_cast<Vec>((pointTwo - pointOne)).MagnitudeSqr();

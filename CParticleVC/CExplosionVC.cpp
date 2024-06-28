@@ -770,7 +770,7 @@ CExplosionVC::RemoveAllExplosionsInArea(CVector pos, float radius)
 class Explosion {
 public:
 	Explosion() {
-		Events::initGameEvent += []() {
+		Events::initRwEvent += []() {
 			if (ExplosionsParticles) {
 				patch::RedirectJump(0x736A40, CExplosionVC::Initialise);
 				patch::RedirectJump(0x737620, CExplosionVC::Update);

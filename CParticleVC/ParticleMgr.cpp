@@ -9,12 +9,12 @@
 using namespace std;
 uint8_t work_buff[55000];
 cParticleSystemMgr mod_ParticleSystemManager;
-RwTexture* gpParticleTexture[63];
+/*RwTexture* gpParticleTexture[63];
 int32_t ParticlesTotalTexturesCount;
 int32_t ParticlesTotalTexturesCount2;
 bool ParticleInitialized[1024] = { false };
 RwTexture* ParticleTexture[1024];
-RwRaster* Raster[1024];
+RwRaster* Raster[1024];*/
 const char* ParticleFilename = PLUGIN_PATH((char*)"DATA\\PARTICLE.CFG");
 
 cParticleSystemMgr::cParticleSystemMgr()
@@ -256,7 +256,7 @@ void cParticleSystemMgr::LoadParticleData()
 	GetFullPathNameA(PLUGIN_PATH((char*)"DATA\\PARTICLE.CFG"), MAX_PATH, full_path, NULL);
 
 	if (GetFileAttributesA(full_path) == INVALID_FILE_ATTRIBUTES) {
-		ErrorWindow("particle.cfg is missing from %s, reason is: %s, please install it! Exiting game...", PLUGIN_PATH((char*)"data", strerror(errno)));
+		ErrorWindow("particle.cfg is missing from %s, please install it! Exiting game...", PLUGIN_PATH((char*)"data"));
 		//MessageBoxA(HWND_DESKTOP, "particle.cfg is missing from data folder. Exiting game...", "CParticleVC.SA.asi", MB_ICONERROR);
 		//exit(0);
 	}

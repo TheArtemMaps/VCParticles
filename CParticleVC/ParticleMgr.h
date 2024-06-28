@@ -134,5 +134,5 @@ public:
 	void LoadParticleData();
 	void RangeCheck(tParticleSystemData* pData) { }
 };
-VALIDATE_SIZE(cParticleSystemMgr, 13320);
+VALIDATE_SIZE(cParticleSystemMgr, 13912);
 extern cParticleSystemMgr mod_ParticleSystemManager;

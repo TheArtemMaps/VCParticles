@@ -62,8 +62,7 @@ int32_t DropOffCesnaMissionStatus;
 int32_t DropOffCesnaMissionStartTime;
 CPlane2 *pDropOffCesna;
 
-CPlane2::CPlane2(int32_t id, uint8_t CreatedBy)
- : CVehicle(*this)
+CPlane2::CPlane2(int32_t id, uint8_t CreatedBy) : CAutomobile(id, CreatedBy, false)
 {
 	CVehicleModelInfo *mi = (CVehicleModelInfo*)CModelInfo::GetModelInfo(id);
 	m_nVehicleSubClass = VEHICLE_PLANE;

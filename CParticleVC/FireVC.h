@@ -37,16 +37,16 @@ public:
 	uint32_t m_nTotalFires;
 	CFireVC m_aFires[NUM_FIRES];
 
-	void StartFire(CVector pos, float size, uint8_t propagation);
-	CFireVC *StartFireEnt(CEntity *entityOnFire, CEntity *fleeFrom, float strength, uint8_t propagation);
+	void StartFire(CVector pos, float size, uint8 unused, CEntity* creator, uint32 nTimeToBurn, int8 nGenerations, uint8 unused_);
+	CFireVC *StartFireEnt(CEntity* target, CEntity* creator, float size, uint8 unused, uint32 lifetime, int8 numGenerations);
 	void Update(void);
 	CFireVC *FindFurthestFire_NeverMindFireMen(CVector coords, float minRange, float maxRange);
-	CFireVC *FindNearestFire(CVector vecPos, float *pDistance);
+	CFireVC *FindNearestFire(const CVector& point, bool bCheckIsBeingExtinguished, bool bCheckWasCreatedByScript);
 	CFireVC *GetNextFreeFire(void);
 	uint32_t GetTotalActiveFires() const;
 	void ExtinguishPoint(CVector point, float range);
-	bool ExtinguishPointWithWater(CVector point, float range);
-	int32_t StartScriptFire(const CVector &pos, CEntity *target, float strength, uint8_t propagation);
+	bool ExtinguishPointWithWater(CVector point, float range, float fWaterStrength);
+	int32_t StartScriptFire(const CVector& pos, CEntity* target, float _fUnused, uint8 _nUnused, int8 nGenerations, int32 nStrength);
 	bool IsScriptFireExtinguish(int16_t index);
 	void RemoveAllScriptFires(void);
 	void RemoveScriptFire(int16_t index);

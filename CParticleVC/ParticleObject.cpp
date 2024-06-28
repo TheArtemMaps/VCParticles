@@ -7,6 +7,7 @@
 #include "CParticleVC.h"
 #include "CCamera.h"
 #include "CGame.h"
+#include <Fx_c.h>
 
 #ifdef COMPATIBLE_SAVES
 #define PARTICLE_OBJECT_SIZEOF 0x84
@@ -14,12 +15,77 @@
 #define PARTICLE_OBJECT_SIZEOF sizeof(CParticleObject)
 #endif
 
+CAudioHydrant List[MAX_AUDIOHYDRANTS];
 
+bool
+CAudioHydrant::Add(CParticleObject* particleobject)
+{
+	for (int32_t i = 0; i < MAX_AUDIOHYDRANTS; i++)
+	{
+		if (List[i].AudioEntity == 0)
+		{
+		//	RwMatrix fxMat;
+		//	g_fx.CreateMatFromVec(&fxMat, &particleobject->GetPosition(), &particleobject->GetPosition());
+			//RwV3d offset = { 0.0f, 0.0f, 0.0f };
+		//	FxSystem_c* gunflashFx = g_fxMan.CreateFxSystem((char*)"water_hydrant", (RwV3d*)&particleobject->GetPosition(), nullptr, false);
+			//List[i].AudioEntity = //DMAudio.CreateEntity(AUDIOTYPE_FIREHYDRANT, particleobject);
+			//auto PlayWaterHydrant = (CReference*(__thiscall*)(CAEFireAudioEntity * ent, int eventId, CVector * posn))0x4DD3C0;
+			//((FireAudio*)gunflashFx->GetFireAudio())->AddAudioEvent(AE_FIRE_HYDRANT, &particleobject->GetPosition());
+			//	DMAudio.SetEntityStatus(List[i].AudioEntity, TRUE);
+
+			List[i].pParticleObject = particleobject;
+
+			return true;
+		}
+	}
+
+	return false;
+}
 CParticleObject gPObjectArray[MAX_PARTICLEOBJECTS];
 
 CParticleObject* CParticleObject::pCloseListHead;
 CParticleObject* CParticleObject::pFarListHead;
 CParticleObject* CParticleObject::pUnusedListHead;
+//CParticleObjectPool gParticleObjectPool(9000); // Max is 9000 PObjects in the pool
+
+const char* CParticleObject::ParticleObjectTypeToString(uint16_t type) {
+	switch (type) {
+	case POBJECT_PAVEMENT_STEAM: return "Pavement steam"; break;
+	case POBJECT_PAVEMENT_STEAM_SLOWMOTION: return "Pavement steam slow motion"; break;
+	case POBJECT_WALL_STEAM: return "Wall steam"; break;
+	case POBJECT_WALL_STEAM_SLOWMOTION: return "Wall steam slow motion"; break;
+	case POBJECT_DARK_SMOKE: return "Dark smoke"; break;
+	case POBJECT_FIRE_HYDRANT: return "Fire hydrant"; break;
+	case POBJECT_CAR_WATER_SPLASH: return "Car water splash"; break;
+	case POBJECT_PED_WATER_SPLASH: return "Pedestrian water splash"; break;
+	case POBJECT_SPLASHES_AROUND: return "Splashes around"; break;
+	case POBJECT_SMALL_FIRE: return "Small fire"; break;
+	case POBJECT_BIG_FIRE: return "Big fire"; break;
+	case POBJECT_DRY_ICE: return "Dry ice"; break;
+	case POBJECT_DRY_ICE_SLOWMOTION: return "Dry ice slow motion"; break;
+	case POBJECT_WATER_FOUNTAIN_VERT: return "Water fountain vertical"; break;
+	case POBJECT_WATER_FOUNTAIN_HORIZ: return "Water fountain horizontal"; break;
+	case POBJECT_FIRE_TRAIL: return "Fire trail"; break;
+	case POBJECT_SMOKE_TRAIL: return "Smoke trail"; break;
+	case POBJECT_FIREBALL_AND_SMOKE: return "Fireball and smoke"; break;
+	case POBJECT_ROCKET_TRAIL: return "Rocket trail"; break;
+	case POBJECT_EXPLOSION_ONCE: return "Explosion once"; break;
+	case POBJECT_CATALINAS_GUNFLASH: return "Catalina's gun flash"; break;
+	case POBJECT_CATALINAS_SHOTGUNFLASH: return "Catalina's shotgun flash"; break;
+	default: return "Unknown particle object type"; break;
+	}
+}
+
+const char* CParticleObject::ParticleObjectStateToString(uint16_t state) {
+	switch (state) {
+	case POBJECTSTATE_INITIALISED: return "Initialised"; break;
+	case POBJECTSTATE_UPDATE_CLOSE: return "Update close"; break;
+	case POBJECTSTATE_UPDATE_FAR: return "Update far"; break;
+	case POBJECTSTATE_FREE: return "Free"; break;
+	default: return "Unknown state"; break;
+	}
+}
+
 
 CParticleObject::CParticleObject() : CPlaceable(*this),
 	m_nFrameCounter(0),
@@ -98,6 +164,8 @@ CParticleObject::AddObject(uint16_t type, CVector const& pos, CVector const& tar
 
 	MoveToList(&pUnusedListHead, &pCloseListHead, pobj);
 
+//	log("PObject pool ID: %d", gParticleObjectPool.GetRef(pobj));
+
 	pobj->m_nState = POBJECTSTATE_UPDATE_CLOSE;
 	pobj->m_Type = (eParticleObjectType)type;
 
@@ -125,6 +193,10 @@ CParticleObject::AddObject(uint16_t type, CVector const& pos, CVector const& tar
 
 	pobj->m_fSize = size;
 	pobj->m_fRandVal = 0.0f;
+	if (pobj) {
+		log("Particle object with name %s was created at X: %4.0f Y: %4.0f Z: %4.0f, PObject state: %s", ParticleObjectTypeToString(type), pos.x, pos.y, pos.z, ParticleObjectStateToString(pobj->m_nState));
+		debug("Particle object with name %s was created at X: %4.0f Y: %4.0f Z: %4.0f, PObject state: %s", ParticleObjectTypeToString(type), pos.x, pos.y, pos.z, ParticleObjectStateToString(pobj->m_nState));
+	}
 	if (type <= POBJECT_CATALINAS_SHOTGUNFLASH)
 	{
 		switch (type)
@@ -202,7 +274,7 @@ CParticleObject::AddObject(uint16_t type, CVector const& pos, CVector const& tar
 			pobj->m_nCreationChance = 0;
 			pobj->m_vecTarget = CVector(0.0f, 0.0f, 0.3f);
 			pobj->m_nRemoveTimer = CTimer::m_snTimeInMilliseconds + 5000;
-			//CAudioHydrant::Add(pobj);
+			CAudioHydrant::Add(pobj);
 			break;
 		}
 
@@ -334,7 +406,6 @@ CParticleObject::AddObject(uint16_t type, CVector const& pos, CVector const& tar
 		}
 		}
 	}
-
 	return pobj;
 }
 
@@ -390,36 +461,28 @@ CParticleObject::RemoveObject(void)
 	{
 		MoveToList(&pCloseListHead, &pUnusedListHead, this);
 		this->m_nState = POBJECTSTATE_FREE;
+		log("Particle object %s that is with state %s was removed", ParticleObjectTypeToString(this->m_Type), ParticleObjectStateToString(this->m_nState));
 		break;
 	}
 	case POBJECTSTATE_UPDATE_FAR:
 	{
 		MoveToList(&pFarListHead, &pUnusedListHead, this);
 		this->m_nState = POBJECTSTATE_FREE;
+		log("Particle object %s that is with state %s was removed", ParticleObjectTypeToString(this->m_Type), ParticleObjectStateToString(this->m_nState));
 		break;
 	}
 	}
 }
 
-void
+/*void
 CParticleObject::RemoveObject(CParticleObject* obj)
 {
-	switch (obj->m_nState)
-	{
-	case POBJECTSTATE_UPDATE_CLOSE:
-	{
-		MoveToList(&pCloseListHead, &pUnusedListHead, obj);
-		obj->m_nState = POBJECTSTATE_FREE;
-		break;
-	}
-	case POBJECTSTATE_UPDATE_FAR:
-	{
-		MoveToList(&pFarListHead, &pUnusedListHead, obj);
-		obj->m_nState = POBJECTSTATE_FREE;
-		break;
-	}
-	}
-}
+		if (obj != nullptr) {
+			obj->RemoveObject();
+			gParticleObjectPool.Delete(obj);
+			log("Removed PObject with ID: %d, name: %s", gParticleObjectPool.GetIndex(obj), ParticleObjectTypeToString(obj->m_Type));
+		}
+}*/
 
 void
 CParticleObject::UpdateAll(void)
@@ -472,9 +535,9 @@ void CParticleObject::UpdateClose(void)
 		{
 			if (this->m_bRemove)
 			{
-			//	if (this->m_Type == POBJECT_FIRE_HYDRANT)
+				//if (this->m_Type == POBJECT_FIRE_HYDRANT)
 				//	CAudioHydrant::Remove(this);
-
+				
 				MoveToList(&pCloseListHead, &pUnusedListHead, this);
 				this->m_nState = POBJECTSTATE_FREE;
 			}
@@ -1084,8 +1147,8 @@ void CParticleObject::UpdateClose(void)
 		MoveToList(&pCloseListHead, &pUnusedListHead, this);
 		this->m_nState = POBJECTSTATE_FREE;
 
-	//	if (this->m_Type == POBJECT_FIRE_HYDRANT)
-			//CAudioHydrant::Remove(this);
+		//if (this->m_Type == POBJECT_FIRE_HYDRANT)
+		//	CAudioHydrant::Remove(this);
 	}
 }
 void
@@ -1097,7 +1160,7 @@ CParticleObject::UpdateFar(void)
 		this->m_nState = POBJECTSTATE_FREE;
 
 		//if (this->m_Type == POBJECT_FIRE_HYDRANT)
-			//CAudioHydrant::Remove(this);
+		//	CAudioHydrant::Remove(this);
 	}
 
 	CVector2D dist = this->GetPosition() - TheCamera.GetPosition();
@@ -1199,7 +1262,7 @@ CParticleObject::SaveParticle(uint8_t* buffer, uint32_t* length)
 	}
 
 	*length = dataLength;
-
+	log("%s", buffer);
 	return true;
 }
 
@@ -1367,7 +1430,8 @@ CParticleObject::MoveToList(CParticleObject** from, CParticleObject** to, CParti
 	ASSERT(from != NULL);
 	ASSERT(to != NULL);
 	ASSERT(obj != NULL);
-
+	const char* fromType = *from ? ParticleObjectTypeToString((*from)->m_Type) : "Empty list";
+	const char* toType = *to ? ParticleObjectTypeToString((*to)->m_Type) : "Empty list";
 	if (obj->m_pPrev == NULL)
 	{
 		*from = obj->m_pNext;
@@ -1388,7 +1452,10 @@ CParticleObject::MoveToList(CParticleObject** from, CParticleObject** to, CParti
 	obj->m_pNext = *to;
 	obj->m_pPrev = NULL;
 	*to = obj;
-
+	log("Particle object %s is moved from this PObject: %s to this PObject: %s",
+		ParticleObjectTypeToString(obj->m_Type),
+		fromType,
+		toType);
 	if (obj->m_pNext)
 		obj->m_pNext->m_pPrev = obj;
 }

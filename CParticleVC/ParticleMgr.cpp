@@ -6,6 +6,7 @@
 #include <csignal>
 #include "IniReader.h"
 #include <CTxdStore.h>
+#include <CParticleVC.h>
 using namespace std;
 uint8_t work_buff[55000];
 cParticleSystemMgr mod_ParticleSystemManager;
@@ -249,17 +250,25 @@ void cParticleSystemMgr::Initialise()
 
 void cParticleSystemMgr::LoadParticleData()
 {
-	//CFileMgr::SetDir(PLUGIN_PATH((char*)"DATA"));
-	CFileMgr::LoadFile(PLUGIN_PATH((char*)"DATA\\PARTICLE.CFG"), work_buff, ARRAY_SIZE(work_buff), "r");
+	//CFileMgr::SetDir("DATA");
+	if (ParticleExEffects) {
+		CFileMgr::LoadFile(PLUGIN_PATH((char*)"DATA\\PARTICLE_PARTICLEEX.CFG"), work_buff, ARRAY_SIZE(work_buff), "r");
+		ParticleFilename = PLUGIN_PATH((char*)"DATA\\PARTICLE_PARTICLEEX.CFG");
+		log("ParticleEx = true, using particle.cfg from %s", ParticleFilename);
+	}
+	else {
+		CFileMgr::LoadFile(PLUGIN_PATH((char*)"DATA\\PARTICLE.CFG"), work_buff, ARRAY_SIZE(work_buff), "r");
+		ParticleFilename = PLUGIN_PATH((char*)"DATA\\PARTICLE.CFG");
+		log("ParticleEx = false, using particle.cfg from %s", ParticleFilename);
+	}
 	//CFileMgr::SetDir("");
-	char full_path[MAX_PATH];
-	GetFullPathNameA(PLUGIN_PATH((char*)"DATA\\PARTICLE.CFG"), MAX_PATH, full_path, NULL);
-
-	if (GetFileAttributesA(full_path) == INVALID_FILE_ATTRIBUTES) {
+	if (!FileExists(ParticleFilename)) {
 		ErrorWindow("particle.cfg is missing from %s, please install it! Exiting game...", PLUGIN_PATH((char*)"data"));
+		return;
 		//MessageBoxA(HWND_DESKTOP, "particle.cfg is missing from data folder. Exiting game...", "CParticleVC.SA.asi", MB_ICONERROR);
 		//exit(0);
 	}
+	//CFileMgr::LoadFile(ParticleFilename, work_buff, ARRAY_SIZE(work_buff), "r");
 	tParticleSystemData* entry = NULL;
 	int32_t type = PARTICLE_FIRST;
 

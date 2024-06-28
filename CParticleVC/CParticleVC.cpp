@@ -7455,8 +7455,7 @@ public:
            Memory::InjectHook(0x71D720, CMBlur::MotionBlurClose, PATCH_JUMP);
            Memory::InjectHook(0x71D730, CMBlur::SetDrunkBlur, PATCH_JUMP);
            Memory::InjectHook(0x71D780, CMBlur::ClearDrunkBlur, PATCH_JUMP);
-            CMBlur::MotionBlurOpen(TheCamera.m_pRwCamera);
-
+           CMBlur::MotionBlurOpen(TheCamera.m_pRwCamera);
 #ifdef GTA_SCENE_EDIT
             CSceneEdit::Initialise();
 #endif

@@ -6940,10 +6940,8 @@ static void __fastcall MyWeaponFire(CWeapon* weapon, int,
     CVector* vecTarget,
     CVector* arg_14)
 {
-    if (owner && targetEntity) {
         DoGunFlash(owner, vecEffectPosn, false);
         weapon->Fire(owner, vecOrigin, vecEffectPosn, targetEntity, vecTarget, arg_14);
-    }
 }
 
 static void __fastcall MyTriggerGunflash(Fx_c* fx, int, CEntity* entity, CVector& origin, CVector& target, bool doGunflash)
@@ -7444,7 +7442,7 @@ static void __fastcall MyAddGlass(Fx_c* fx, int, CVector& pos, RwRGBA& color, fl
                     500);
             }
 }
-#include "CObjectData.h"
+
 class CParticleVC {
 public:
     CParticleVC() {
@@ -7460,8 +7458,9 @@ public:
             CSceneEdit::Initialise();
 #endif
             };
+
         Events::initRwEvent += []() {
-            ClearLogFile();
+            
             CParticle::Initialise();
             log("Injecting patches...");;
             if (BulletImpactParticles) {
@@ -7859,6 +7858,19 @@ public:
 
             };
            /*Events::pedRenderEvent += [](CPed* ped) {
+               auto weaptype = ped->m_aWeapons[ped->m_nActiveWeaponSlot].m_eWeaponType;
+               auto info = GetInfo(ped);
+               CVector firePos(0.0f, 0.0f, 0.6f);
+               firePos = *ped->GetMatrix() * firePos;
+               CEntity* nearStatic = (CObject*)CWorld::TestSphereAgainstWorld(firePos, info->m_fRadius, nil, true, false, false, true, false, false);
+               if (nearStatic && weaptype == WEAPON_CHAINSAW)
+               {
+                   debug("Near static");
+                   for (int i = 0; i < 4; i++) {
+                       CParticle::AddParticle(PARTICLE_SPARK_SMALL, gaTempSphereColPoints[0].m_vecPoint, CVector(0.0f, 0.0f, 0.3f), 0, 0.0f, 0, 0, 0, 0);
+                       CParticle::AddParticle(PARTICLE_SPARK, gaTempSphereColPoints[0].m_vecPoint, 0.1f * gaTempSphereColPoints[0].m_vecNormal, 0, 0.0f, 0, 0, 0, 0);
+                   }
+               }
                int sound{};
                Command<0x0AC1>(plugin::paths::GetPluginDirRelativePathA((char*)"fireVC.wav"), &sound);
 
@@ -8534,14 +8546,6 @@ public:
                             || ped->m_ePedState == PEDSTATE_DEAD && !((CTimer::m_FrameCounter + 17) & 3))
                         {
                             CParticle::AddParticle(PARTICLE_TEST, *a4, CVector(0.0f, 0.0f, 0.0f), NULL, 0.2f);
-                        }
-                        CEntity* nearStatic = (CObject*)CWorld::TestSphereAgainstWorld(*a4, info->m_fRadius, nil, true, false, false, true, false, false);
-                        if (nearStatic)
-                        {
-                            for (int i = 0; i < 4; i++) {
-                                CParticle::AddParticle(PARTICLE_SPARK_SMALL, gaTempSphereColPoints[0].m_vecPoint, CVector(0.0f, 0.0f, 0.3f), 0, 0.0f, 0, 0, 0, 0);
-                                CParticle::AddParticle(PARTICLE_SPARK, gaTempSphereColPoints[0].m_vecPoint, 0.1f * gaTempSphereColPoints[0].m_vecNormal, 0, 0.0f, 0, 0, 0, 0);
-                            }
                         }
 
                         if (isHeavy)

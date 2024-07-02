@@ -125,30 +125,32 @@ bool DoesNeedToVehProcessBombTimer(eExplosionTypeVC type) {
 // Debug purposes
 auto ExplosionTypeToString(eExplosionTypeVC explosionType) {
 	switch (explosionType) {
-	case EXPLOSION_UNDEFINED: return "Undefined";
-	case EXPLOSION_GRENADE: return "Grenade";
-	case EXPLOSION_MOLOTOV: return "Molotov";
-	case EXPLOSION_ROCKET: return "Rocket";
-	case EXPLOSION_WEAK_ROCKET: return "Weak Rocket";
-	case EXPLOSION_CAR: return "Car";
-	case EXPLOSION_QUICK_CAR: return "Quick Car";
-	case EXPLOSION_BOAT: return "Boat";
-	case EXPLOSION_AIRCRAFT: return "Aircraft";
-	case EXPLOSION_MINE: return "Mine";
-	case EXPLOSION_OBJECT: return "Object";
-	case EXPLOSION_TANK_FIRE: return "Tank Fire";
-	case EXPLOSION_SMALL: return "Small";
-	case EXPLOSION_RC_VEHICLE: return "RC Vehicle";
-	case EXPLOSION_HELI: return "Helicopter";
-	case EXPLOSION_HELI2: return "Helicopter 2";
-	case EXPLOSION_BARREL: return "Barrel";
-	case EXPLOSION_CAR_QUICK: return "Quick Car";
-	case EXPLOSION_TANK_GRENADE: return "Tank Grenade";
-	case EXPLOSION_HELI_BOMB: return "Helicopter Bomb";
-	default: return "Unknown explosion type";
+	case EXPLOSION_UNDEFINED: return "Undefined"; break;
+	case EXPLOSION_GRENADE: return "Grenade"; break;
+	case EXPLOSION_MOLOTOV: return "Molotov"; break;
+	case EXPLOSION_ROCKET: return "Rocket"; break;
+	case EXPLOSION_WEAK_ROCKET: return "Weak Rocket"; break;
+	case EXPLOSION_CAR: return "Car"; break;
+	case EXPLOSION_QUICK_CAR: return "Quick Car"; break;
+	case EXPLOSION_BOAT: return "Boat"; break;
+	case EXPLOSION_AIRCRAFT: return "Aircraft"; break;
+	case EXPLOSION_MINE: return "Mine"; break;
+	case EXPLOSION_OBJECT: return "Object"; break;
+	case EXPLOSION_TANK_FIRE: return "Tank Fire"; break;
+	case EXPLOSION_SMALL: return "Small"; break;
+	case EXPLOSION_RC_VEHICLE: return "RC Vehicle"; break;
+	case EXPLOSION_HELI: return "Helicopter"; break;
+	case EXPLOSION_HELI2: return "Helicopter 2"; break;
+	case EXPLOSION_BARREL: return "Barrel"; break;
+	case EXPLOSION_CAR_QUICK: return "Quick Car"; break;
+	case EXPLOSION_TANK_GRENADE: return "Tank Grenade"; break;
+	case EXPLOSION_HELI_BOMB: return "Helicopter Bomb"; break;
+	default: return "Unknown explosion type"; break;
 	}
 }
-
+CPlayerInfo& FindPlayerInfo(int32 playerId) {
+	return CWorld::Players[playerId < 0 ? CWorld::PlayerInFocus : playerId];
+}
 bool
 #ifdef SIMPLER_MISSIONS
 CExplosionVC::AddExplosion(CEntity* explodingEntity, CEntity* culprit, eExplosionTypeVC type, const CVector& pos, uint32_t lifetime, bool makeSound, float radius)
@@ -163,6 +165,11 @@ CExplosionVC::AddExplosion(CEntity* victim, CEntity* creator, eExplosionTypeVC t
 	RwRGBA color = colAddExplosion;
 	RwRGBA colorGrenade = colGrenade;
 	bool bDontExplode = false;
+	if (FindPlayerPed() == creator) {
+		auto& info = FindPlayerInfo(-1);
+		info.m_nHavocCaused += 5;
+		info.m_fCurrentChaseValue += 7.0f;
+	}
 	pPosn = pos;
 	pPosn.z += 5.0f;
 #ifdef FIX_BUGS
@@ -218,12 +225,13 @@ CExplosionVC::AddExplosion(CEntity* victim, CEntity* creator, eExplosionTypeVC t
 			//((FireAudio*)explosion.m_pCreatorEntity)->AddAudioEvent(AE_FIRE, &pos);
 		}
 		//CEventList::RegisterEvent(EVENT_EXPLOSION, posGround, 250);
-		if (Distance(explosion.m_vecPosition, TheCamera.GetPosition()) < 40.0f) {
-			uint8_t tmp = CGeneral::GetRandomNumberInRange(0, 64) - 64;
-			colorGrenade.green += tmp;
-			colorGrenade.blue += tmp;
-			CParticle::AddParticle(PARTICLE_EXPLOSION_LFAST, explosion.m_vecPosition, CVector(0.0f, 0.0f, 0.0f), nullptr, 4.5f, colorGrenade);
-		}
+			if (Distance(explosion.m_vecPosition, TheCamera.GetPosition()) < 40.0f) {
+				uint8_t tmp = CGeneral::GetRandomNumberInRange(0, 64) - 64;
+				colorGrenade.green += tmp;
+				colorGrenade.blue += tmp;
+
+				CParticle::AddParticle(PARTICLE_EXPLOSION_LFAST, explosion.m_vecPosition, CVector(0.0f, 0.0f, 0.0f), nullptr, 4.5f, colorGrenade);
+			}
 		break;
 	case EXPLOSION_OBJECT: 
 		if (!bInvisible) {
@@ -254,6 +262,7 @@ CExplosionVC::AddExplosion(CEntity* victim, CEntity* creator, eExplosionTypeVC t
 		if (CWaterLevel::GetWaterLevelNoWaves(posGround.x, posGround.y, posGround.z, &waterLevel, nullptr, nullptr)
 			&& posGround.z < waterLevel && waterLevel - 6.0f < posGround.z) { // some subway/tunnels check?
 			bDontExplode = true;
+			break;
 		}
 		else if (found) {
 			//gFireManager.StartFire(posGround, 1.8f, false);
@@ -738,7 +747,7 @@ CExplosionVC::Update()
 	}
 }
 
-bool
+/*bool
 CExplosionVC::TestForExplosionInArea(eExplosionTypeVC type, float x1, float x2, float y1, float y2, float z1, float z2)
 {
 	for (int i = 0; i < ARRAY_SIZE(gaExplosion); i++) {
@@ -754,6 +763,29 @@ CExplosionVC::TestForExplosionInArea(eExplosionTypeVC type, float x1, float x2, 
 		}
 	}
 	return false;
+}*/
+bool BoundingBox::IsPointWithin(const CVector& point) const {
+	return point.x >= m_vecMin.x
+		&& point.y >= m_vecMin.y
+		&& point.z >= m_vecMin.z
+		&& point.x <= m_vecMax.x
+		&& point.y <= m_vecMax.y
+		&& point.z <= m_vecMax.z;
+}
+
+bool CExplosionVC::TestForExplosionInArea(eExplosionTypeVC type, float minX, float maxX, float minY, float maxY, float minZ, float maxZ) {
+	for (auto& exp : gaExplosion) {
+		if (!exp.m_nActiveCounter)
+			continue;
+
+		if (exp.m_ExplosionType != type && type != eExplosionTypeVC::EXPLOSION_UNDEFINED)
+			continue;
+
+		const BoundingBox boundingBox{ { minX, minY, minZ }, { maxX, maxY, maxZ } };
+		if (static_cast<BoundingBox>(boundingBox).IsPointWithin(exp.m_vecPosition))
+			return true;
+	}
+	return false;
 }
 
 void
@@ -766,24 +798,21 @@ CExplosionVC::RemoveAllExplosionsInArea(CVector pos, float radius)
 		}
 	}
 }
-
 class Explosion {
 public:
 	Explosion() {
-		Events::initRwEvent += []() {
-			if (ExplosionsParticles) {
-				patch::RedirectJump(0x736A40, CExplosionVC::Initialise);
-				patch::RedirectJump(0x737620, CExplosionVC::Update);
-				patch::RedirectJump(0x736A50, CExplosionVC::AddExplosion);
-				patch::RedirectJump(0x7369E0, CExplosionVC::RemoveAllExplosionsInArea);
-				patch::RedirectJump(0x736950, CExplosionVC::TestForExplosionInArea);
-				patch::RedirectJump(0x736940, CExplosionVC::GetExplosionPosition);
-				patch::RedirectJump(0x736930, CExplosionVC::GetExplosionType);
-				patch::RedirectJump(0x736920, CExplosionVC::DoesExplosionMakeSound);
-				patch::RedirectJump(0x736910, CExplosionVC::ResetExplosionActiveCounter);
-				patch::RedirectJump(0x736840, CExplosionVC::ClearAllExplosions);
-			}
-		};
+		if (ExplosionsParticles) {
+			patch::RedirectJump(0x736A40, CExplosionVC::Initialise);
+			patch::RedirectJump(0x737620, CExplosionVC::Update);
+			patch::RedirectJump(0x736A50, CExplosionVC::AddExplosion);
+			patch::RedirectJump(0x7369E0, CExplosionVC::RemoveAllExplosionsInArea);
+			patch::RedirectJump(0x736950, CExplosionVC::TestForExplosionInArea);
+			patch::RedirectJump(0x736940, CExplosionVC::GetExplosionPosition);
+			patch::RedirectJump(0x736930, CExplosionVC::GetExplosionType);
+			patch::RedirectJump(0x736920, CExplosionVC::DoesExplosionMakeSound);
+			patch::RedirectJump(0x736910, CExplosionVC::ResetExplosionActiveCounter);
+			patch::RedirectJump(0x736840, CExplosionVC::ClearAllExplosions);
+		}
 
 		/*Events::gameProcessEvent += []() {
 			CExplosionVC::Update();

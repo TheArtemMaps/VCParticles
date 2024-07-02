@@ -263,6 +263,12 @@ public:
         return v.x * GetRight() + v.y * GetForward() + v.z * GetUp();
     }
 };
+
+class FxSys : public FxSystem_c {
+public:
+    void DoFxAudio(CVector pos);
+};
+
 class Vec2D : public CVector2D {
 public:
     void Normalise(void) {
@@ -330,11 +336,6 @@ public:
      void AddSteamsFromGround(CVector* unused);
 };
 
-class BoundBox : public CBox {
-public:
-    bool IsPointWithin(const CVector& point) const;
-};
-
 class CollData : public CCollisionData {
 public:
     auto GetTris()           const { return std::span{ m_pTriangles, m_nNumTriangles }; }
@@ -398,6 +399,7 @@ public:
 constexpr inline bool operator==(const CVector& vec, float equalTo) {
     return vec.x == equalTo && vec.y == equalTo && vec.z == equalTo;
 }
+
 class Veh : public CBoat {
 public:
     void AddExhaustParticles();
@@ -412,6 +414,21 @@ class ProjectileInfo : public CProjectileInfo {
 public:
     void Update();
 };
+
+class Box : public CBox {
+public:
+     Box() = default;
+     Box(CVector min, CVector max) { m_vecMin = min, m_vecMax = max; }
+};
+
+class BoundingBox : public Box {
+public:
+    BoundingBox() : Box(CVector{1.0f}, CVector{ -1.0f }) {}
+    BoundingBox(CVector min, CVector max) : Box(min, max) {}
+    BoundingBox(const Box& box) : Box(box) {}
+    bool IsPointWithin(const CVector& point) const;
+};
+
 static bool HasTimePointPassed(uint32_t timeMs) { return CTimer::m_snTimeInMilliseconds >= timeMs; }
 static bool IsTimeInRange(uint32_t fromMs, uint32_t toMs) { return HasTimePointPassed(fromMs) && !HasTimePointPassed(toMs); }
 static CVector Normalized(CVector v) { v.Normalise(); return v; }

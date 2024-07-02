@@ -4219,51 +4219,52 @@ void CParticle::HandleShootableBirdsStuff(CEntity* entity, CVector const& camPos
     CParticle* particle = psystem->m_pParticles;
     CParticle* prevParticle = NULL;
     bool bRemoveParticle;
-
-    for (; particle != NULL; _Next(particle, prevParticle, psystem, bRemoveParticle))
-    {
-        bRemoveParticle = false;
-
-        CVector2D vecPos(particle->m_vecPosition.x, particle->m_vecPosition.y);
-        CVector2D vecCamPos(camPos.x, camPos.y);
-
-        CVector2D vecDist = vecPos - vecCamPos;
-        static_cast<Vec2D>(vecDist).Normalise();
-
-        float fHead = DEGTORAD(fHeading);
-
-        CVector2D vecDir(-Sin(fHead), Cos(fHead));
-        static_cast<Vec2D>(vecDir).Normalise();
-
-        float fDot = DotProduct2D(vecDir, vecDist);
-
-        if (fDot > 0.0f && fDot > fBirdAngle)
+    if (particle) {
+        for (; particle != NULL; _Next(particle, prevParticle, psystem, bRemoveParticle))
         {
-            if (static_cast<Vec>(((camPos - particle->m_vecPosition))).MagnitudeSqr() < 40000.0f)
+            bRemoveParticle = false;
+
+            CVector2D vecPos(particle->m_vecPosition.x, particle->m_vecPosition.y);
+            CVector2D vecCamPos(camPos.x, camPos.y);
+
+            CVector2D vecDist = vecPos - vecCamPos;
+            static_cast<Vec2D>(vecDist).Normalise();
+
+            float fHead = DEGTORAD(fHeading);
+
+            CVector2D vecDir(-Sin(fHead), Cos(fHead));
+            static_cast<Vec2D>(vecDir).Normalise();
+
+            float fDot = DotProduct2D(vecDir, vecDist);
+
+            if (fDot > 0.0f && fDot > fBirdAngle)
             {
-                //CStats::SeagullsKilled++;
-
-                bRemoveParticle = true;
-
-                for (int32_t i = 0; i < 8; i++)
+                if (static_cast<Vec>(((camPos - particle->m_vecPosition))).MagnitudeSqr() < 40000.0f)
                 {
-                    CParticle* pBirdDerbis = AddParticle(PARTICLE_BIRD_DEBRIS,
-                        particle->m_vecPosition,
-                        CVector
-                        (
-                            CGeneral::GetRandomNumberInRange(-3.0f, 3.0f),
-                            CGeneral::GetRandomNumberInRange(-3.0f, 3.0f),
-                            CGeneral::GetRandomNumberInRange(-3.0f, 3.0f)
-                        ),
-                        NULL,
-                        0.3f,
-                        particle->m_Color,
-                        CGeneral::GetRandomNumberInRange(20, 40),
-                        0,
-                        GetRandomNumber() & 3,
-                        200);
-                    if (pBirdDerbis)
-                        pBirdDerbis->m_nAlpha = particle->m_nAlpha;
+                    //CStats::SeagullsKilled++;
+
+                    bRemoveParticle = true;
+
+                    for (int32_t i = 0; i < 8; i++)
+                    {
+                        CParticle* pBirdDerbis = AddParticle(PARTICLE_BIRD_DEBRIS,
+                            particle->m_vecPosition,
+                            CVector
+                            (
+                                CGeneral::GetRandomNumberInRange(-3.0f, 3.0f),
+                                CGeneral::GetRandomNumberInRange(-3.0f, 3.0f),
+                                CGeneral::GetRandomNumberInRange(-3.0f, 3.0f)
+                            ),
+                            NULL,
+                            0.3f,
+                            particle->m_Color,
+                            CGeneral::GetRandomNumberInRange(20, 40),
+                            0,
+                            GetRandomNumber() & 3,
+                            200);
+                        if (pBirdDerbis)
+                            pBirdDerbis->m_nAlpha = particle->m_nAlpha;
+                    }
                 }
             }
         }
@@ -6648,14 +6649,6 @@ void Firev::CreateFxSysForStrength(const CVector& point, RwMatrix* matrix) {
         //m_pFxSystem->Play();
 }
 
-bool BoundBox::IsPointWithin(const CVector& point) const {
-    return point.x >= m_vecMin.x
-        && point.y >= m_vecMin.y
-        && point.z >= m_vecMin.z
-        && point.x <= m_vecMax.x
-        && point.y <= m_vecMax.y
-        && point.z <= m_vecMax.z;
-}
 CVector RandomVec1(float min, float max)
 {
     const auto Get = [=] { return CGeneral::GetRandomNumberInRange(min, max); };
@@ -7442,33 +7435,97 @@ static void __fastcall MyAddGlass(Fx_c* fx, int, CVector& pos, RwRGBA& color, fl
                     500);
             }
 }
+// 0x4AAC90
+/*void FxSys::DoFxAudio(CVector pos) {
+    constexpr struct data { tParticleType hash; eAudioEvents event; } mapping[] = {
+        { PARTICLE_CARFLAME,           AE_FIRE               },
+        { PARTICLE_WATER_HYDRANT,  AE_FIRE_HYDRANT       },
+    };
+  //  tParticleSystemData* psystem{};
+  //  CParticle* particle{};
+   // for (int32_t i = 0; i < 94; i++) {
+      auto  psystem = &mod_ParticleSystemManager.m_aParticles[PARTICLE_CARFLAME];
+      auto  particle = psystem->m_pParticles;
+   // }
+    data TheData;
+  //  pos = particle->m_vecPosition;
+        if (particle && psystem->m_Type == TheData.hash) {
+         //   pos = particle->m_vecPosition;
+            ((FireAudio*)GetFireAudio())->AddAudioEvent(TheData.event, &pos);
+        }
+    //}
+}*/
+
+void FxSys::DoFxAudio(CVector pos) {
+    struct AudioEvent {
+        tParticleType ParticleType;
+        eAudioEvents eventID;
+    };
+
+    const std::array<AudioEvent, 5> audioEvents = { {
+        {PARTICLE_CARFLAME, AE_FIRE_CAR},
+        {PARTICLE_FLAME, AE_FIRE},
+        {PARTICLE_CARFLAME_MOVING, AE_FIRE_CAR},
+        {PARTICLE_WATER_HYDRANT, AE_FIRE_HYDRANT},
+        {PARTICLE_SPLASH, AE_FIRE_HYDRANT},
+    } };
+
+    for (const auto& event : audioEvents) {
+        auto psystem = &mod_ParticleSystemManager.m_aParticles[event.ParticleType];
+        auto particle = psystem->m_pParticles;
+        particle->AddParticle(event.ParticleType, pos, CVector(0.0f, 0.0f, 0.0f));
+        if (particle && psystem->m_Type == event.ParticleType) {
+            pos = particle->m_vecPosition;
+            static_cast<FireAudio*>(GetFireAudio())->AddAudioEvent(event.eventID, &pos);
+            break;
+        }
+    }
+}
+
+static void __fastcall MyImpactFx(Fx_c* fx, int, CVector& posn, CVector& direction, int32_t bulletFxType, int32_t amount, float arg4) {
+                {
+                    for (int32_t i = 0; i < 16; i++) {
+                        CParticle::AddParticle(PARTICLE_SPARK, posn, direction * 0.05f);
+                    }
+
+                    CVector smokePos = posn;
+                    smokePos.x += CGeneral::GetRandomNumberInRange(-0.2f, 0.2f);
+                    smokePos.y += CGeneral::GetRandomNumberInRange(-0.2f, 0.2f);
+                    smokePos.z += CGeneral::GetRandomNumberInRange(-0.2f, 0.2f);
+
+                    CParticle::AddParticle(PARTICLE_BULLETHIT_SMOKE, smokePos, CVector(0.0f, 0.0f, 0.0f));
+                }
+    fx->AddBulletImpact(posn, direction, bulletFxType, amount, arg4);
+}
 
 class CParticleVC {
 public:
     CParticleVC() {
         Events::initGameEvent += []() {
            CDebug::DebugInitTextBuffer();
-           Memory::InjectHook(0x71D700, CMBlur::MotionBlurRender, PATCH_JUMP);
-           Memory::InjectHook(0x71D710, CMBlur::MotionBlurOpen, PATCH_JUMP);
-           Memory::InjectHook(0x71D720, CMBlur::MotionBlurClose, PATCH_JUMP);
-           Memory::InjectHook(0x71D730, CMBlur::SetDrunkBlur, PATCH_JUMP);
-           Memory::InjectHook(0x71D780, CMBlur::ClearDrunkBlur, PATCH_JUMP);
-           CMBlur::MotionBlurOpen(TheCamera.m_pRwCamera);
 #ifdef GTA_SCENE_EDIT
             CSceneEdit::Initialise();
 #endif
+            Memory::InjectHook(0x71D700, CMBlur::MotionBlurRender, PATCH_JUMP);
+            Memory::InjectHook(0x71D710, CMBlur::MotionBlurOpen, PATCH_JUMP);
+            Memory::InjectHook(0x71D720, CMBlur::MotionBlurClose, PATCH_JUMP);
+            Memory::InjectHook(0x71D730, CMBlur::SetDrunkBlur, PATCH_JUMP);
+            Memory::InjectHook(0x71D780, CMBlur::ClearDrunkBlur, PATCH_JUMP);
+            CMBlur::MotionBlurOpen(TheCamera.m_pRwCamera);
             };
 
         Events::initRwEvent += []() {
-            
             CParticle::Initialise();
             log("Injecting patches...");;
+          //  patch::RedirectCall(0x7424CB, MyFireSniper);
+         //   Memory::InjectHook(0x4AAC90, &FxSys::DoFxAudio, PATCH_JUMP);
             if (BulletImpactParticles) {
                 patch::RedirectCall(0x73CD92, MyDoBulletImpact);
                 patch::RedirectCall(0x741199, MyDoBulletImpact);
                 patch::RedirectCall(0x7411DF, MyDoBulletImpact);
                 patch::RedirectCall(0x7412DF, MyDoBulletImpact);
                 patch::RedirectCall(0x741E30, MyDoBulletImpact);
+                patch::RedirectCall(0x736545, MyImpactFx);
                 patch::RedirectCall(0x49F4C1, FxInfo);
                 patch::RedirectCall(0x49F0DD, FxInfo);
                 patch::RedirectCall(0x49F59A, FxInfo);
@@ -7529,9 +7586,12 @@ public:
                 Memory::InjectHook(0x48ED94, &MyTriggerGunflash, PATCH_CALL);
                 Memory::InjectHook(0x740DA7, &MyTriggerGunflash, PATCH_CALL);
                 patch::RedirectCall(0x628328, MyWeaponFire);
+              //  patch::RedirectCall(0x61ECCD, MyWeaponFire);
+             //   patch::RedirectJump(0x61ECA7, MyWeaponFire);
+          //    Memory::InjectHook(0x61ECCD, &MyWeaponFire, PATCH_CALL);
                 //AE_FIRE_HYDRANT;
              //   patch::RedirectCall(0x5678F2, TriggerWaterHydrant);
-           //     patch::RedirectCall(0x567902, TriggerWaterHydrant);
+            //    patch::RedirectCall(0x567902, TriggerWaterHydrant);
              //   Memory::InjectHook(0x742299, &DoDriveByGunflash, PATCH_CALL);
                 //patch::RedirectJump(0x4A0DE0, MyTriggerGunflash);
                 patch::Nop(0x61ECE6, 0x61ECFA - 0x61ECE6); // CPed::DoGunFlash [CTaskSimpleUseGun::FireGun]
@@ -7563,7 +7623,7 @@ public:
             }
             // if (FireWhenAboutToExplode) {
                  //Memory::InjectHook(0x6A7090, &Auto::ProcessCarOnFireAndExplode, PATCH_JUMP);
-              //   memset((void*)0x6A7542, 0x90, 6); // Fire when car is about to explode
+             //    memset((void*)0x6A7542, 0x90, 6); // Fire when car is about to explode
                  //memset((void*)0x6F1E41, 0x90, 5); // Fire when boat is about to explode
            //  }
           //   Memory::Patch<float>(0x4A06F5, 0.0f);
@@ -8530,9 +8590,9 @@ public:
                     *a5 /= 2.0f;
                     collisionDist = sphere->m_vecCenter - *a5;
                     //  collisionDist.Normalise();
-                //    collisionDist /= 2.0f;
+                    collisionDist /= 2.0f;
                     CVector dir = collisionDist * RecipSqrt(1.0f, 10.0f * static_cast<Vec>(collisionDist).MagnitudeSqr());
-                  //  dir /= 2.0f;
+                    dir /= 2.0f;
                     weaptype = creator->m_aWeapons[creator->m_nActiveWeaponSlot].m_eWeaponType;
                     bool isHeavy = weaptype >= WEAPON_GOLFCLUB && weaptype <= WEAPON_KATANA;
                     info = GetInfo(creator);
@@ -8560,7 +8620,7 @@ public:
                             CParticle::AddParticle(PARTICLE_BLOOD, bloodPos, dir);
                         }
                         newDir = dir;
-                    //    newDir /= 2.0f;
+                        newDir /= 2.0f;
                         newDir.z += 0.2f;
                         CParticle::AddParticle(PARTICLE_BLOOD_SMALL, *a4, newDir);
                         for (int i = 0; i < 7; i++) {
@@ -9240,7 +9300,6 @@ public:
                 CParticle::AddParticle(PARTICLE_DEBRIS, (CVector&)a4->pos, CVector(0.0f, 0.0f, 0.0f));
             }
             };*/
-
     }
 
 } _cParticleVC;

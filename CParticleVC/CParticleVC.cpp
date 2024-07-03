@@ -67,7 +67,6 @@
 #include "CTheScripts.h"
 #include "Buoyancy.h"
 #include "CAnimManager.h"
-#include "FallingGlassPane.h"
 #pragma comment(lib, "wininet.lib")
 using namespace std;
 using namespace plugin;
@@ -143,6 +142,8 @@ bool VCIIIDamagedVehicleSmokePos = true;
 bool GunshellSounds = false;
 bool ShatteredGlassParticles = true;
 float lim = 0.2f;
+float OffsetX[1024] = { 0.2f }, OffsetY[1024] = { 0.0f }, OffsetZ[1024] = { 0.0f };
+bool InitializedWeapon[1024] = { false };
 enum {
     NUM_RAIN_STREAKS = 35
 };
@@ -1145,7 +1146,7 @@ void CParticle::ReloadConfig()
         if (Should != false) { // Check if the section exists by checking a default value
             InitializedVehicle[i] = true;
             ShouldHaveFireExhaust[i] = Should;
-            log("Section1: %s Section2: %s", string1, string2);
+            log("Section1 (Vehicles): %s", string1);
         }
     }
     gbDebugStuffInRelease = ini.ReadBoolean("MAIN", "Enable debug text", false);
@@ -1207,6 +1208,19 @@ void CParticle::ReloadConfig()
     fParticleScaleLimit = ini.ReadFloat("MISC", "Particles scale limit", 0.5f);
     SnowFlakes = ini.ReadInteger("MISC", "Max snow flakes", 1);
     lim = ini.ReadFloat("MISC", "Min distance to camera", 0.2f);
+    for (int32_t i = 0; i < 1024; ++i) {
+        auto string1 = std::format("{}{}", "WEAP", i);
+        auto string2 = string1.c_str();
+        float x = ini.ReadFloat(string2, "Second gunflash offset x", -1);
+        if (x != -1) {
+            InitializedWeapon[i] = true;
+            OffsetX[i] = x;
+            OffsetY[i] = ini.ReadFloat(string2, "Second gunflash offset y", 0.0f);
+            OffsetZ[i] = ini.ReadFloat(string2, "Second gunflash offset z", 0.0f);
+            log("Section1 (Weapons): %s", string1);
+        }
+    }
+
    /* XBOX = ini.ReadBoolean("ParticleEX", "XBOX", false);
     XBOX2 = ini.ReadBoolean("ParticleEX", "XBOX2", false);
     PS2 = ini.ReadBoolean("ParticleEX", "PS2", false);*/
@@ -5612,14 +5626,23 @@ bool DoGunFlash(CPed* shooter, CVector* fireSource, bool LeftHand) {
         Type = PARTICLE_GUNFLASH_NOANIM;
         Type2 = PARTICLE_GUNFLASH;
     }*/
-    CVector offset = GetInfo(shooter)->m_vecFireOffset;
     auto WeaponInfo = GetInfo(shooter);
+    CVector offset = WeaponInfo->m_vecFireOffset;
+    auto weapType = shooter->m_aWeapons[shooter->m_nActiveWeaponSlot].m_eWeaponType;
     if (LeftHand) {
-        offset.x *= 0.40f;
-        offset.z *= 1.20f;
+            // offset.x *= 0.40f;
+            // offset.z *= 1.20f;
+        if (!InitializedWeapon[weapType]) {
+            return false;
+        }
+            offset.x = OffsetX[weapType];
+            offset.y = OffsetY[weapType];
+            offset.z = OffsetZ[weapType];
+            log("Second gunflsh offset X for weapon type %d is %f", weapType, OffsetX[weapType]);
+            log("Second gunflsh offset Y for weapon type %d is %f", weapType, OffsetY[weapType]);
+            log("Second gunflsh offset Z for weapon type %d is %f", weapType, OffsetZ[weapType]);
     }
     float rnd = 0.0f;
-    auto weapType = shooter->m_aWeapons[shooter->m_nActiveWeaponSlot].m_eWeaponType;
     bool shooterMoving = (fabsf(shooter->m_vecMoveSpeed.x) > 0.0f && fabsf(shooter->m_vecMoveSpeed.y) > 0.0f);
     bool weaponFound = false;  // Is the weapon type found or not
     switch (weapType) {
@@ -5633,7 +5656,7 @@ bool DoGunFlash(CPed* shooter, CVector* fireSource, bool LeftHand) {
             gunflashPos += CVector(1.5f * vel.x, 1.5f * vel.y, 0.0f);
         }
         if (LeftHand) {
-            gunflashPos += CVector(offset.x, 0.0f, offset.z);
+            gunflashPos += CVector(offset.x, offset.y, offset.z);
         }
         CParticle::AddParticle(Type, gunflashPos, CVector(0.0f, 0.0f, 0.0f), nullptr, 0.06f);
         gunflashPos += CVector(0.06f * ahead.x, 0.06f * ahead.y, 0.0f);
@@ -5653,7 +5676,7 @@ bool DoGunFlash(CPed* shooter, CVector* fireSource, bool LeftHand) {
             gunflashPos += CVector(1.5f * vel.x, 1.5f * vel.y, 0.0f);
         }
         if (LeftHand) {
-            gunflashPos += CVector(offset.x, 0.0f, offset.z);
+            gunflashPos += CVector(offset.x, offset.y, offset.z);
         }
 
         CParticle::AddParticle(Type, gunflashPos, CVector(0.0f, 0.0f, 0.0f), nullptr, 0.07f);
@@ -5681,7 +5704,7 @@ bool DoGunFlash(CPed* shooter, CVector* fireSource, bool LeftHand) {
         }
 
         if (LeftHand) {
-            gunflashPos += CVector(offset.x, 0.0f, offset.z);
+            gunflashPos += CVector(offset.x, offset.y, offset.z);
         }
 
         gunflashPos += CVector(rotOffset.x * 0.1f, rotOffset.y * 0.1f, 0.0f);
@@ -5732,7 +5755,7 @@ bool DoGunFlash(CPed* shooter, CVector* fireSource, bool LeftHand) {
             }
 
             if (LeftHand) {
-                gunflashPos += CVector(offset.x, 0.0f, offset.z);
+                gunflashPos += CVector(offset.x, offset.y, offset.z);
             }
 
             CParticle::AddParticle(Type, gunflashPos, CVector(0.0f, 0.0f, 0.0f), nullptr, 0.06f);
@@ -5753,7 +5776,7 @@ bool DoGunFlash(CPed* shooter, CVector* fireSource, bool LeftHand) {
             }
 
             if (LeftHand) {
-                gunflashPos += CVector(offset.x, 0.0f, offset.z);
+                gunflashPos += CVector(offset.x, offset.y, offset.z);
             }
 
             CParticle::AddParticle(Type, gunflashPos, CVector(0.0f, 0.0f, 0.0f), nullptr, 0.07f);
@@ -5784,7 +5807,7 @@ bool DoGunFlash(CPed* shooter, CVector* fireSource, bool LeftHand) {
             }
 
             if (LeftHand) {
-                gunflashPos += CVector(offset.x, 0.0f, offset.z);
+                gunflashPos += CVector(offset.x, offset.y, offset.z);
             }
 
             gunflashPos += CVector(rotOffset.x * 0.1f, rotOffset.y * 0.1f, 0.0f);
@@ -8025,7 +8048,6 @@ public:
                   }
               }
           };*/
-
         if (DebugMenuLoad()) {
             static const char* particleTypes[] = {
             "PARTICLE_SPARK",
@@ -8149,6 +8171,9 @@ public:
             };
             DebugMenuAddVar("Particles", "Particles scale limit", &fParticleScaleLimit, nullptr, 0.1f, 0.0f, 50.0f);
             DebugMenuAddVar("Particles", "Drunkness", &CMBlur::Drunkness, nullptr, 0.1f, 0.0f, 10.0f);
+         //   DebugMenuAddVar("Particles", "Second Gunflash OffsetX", &OffsetX[weapType], nullptr, 0.1f, 0.0f, 50.0f);
+         //   DebugMenuAddVar("Particles", "Second Gunflash OffsetY", &OffsetY[weapType], nullptr, 0.1f, 0.0f, 50.0f);
+        //    DebugMenuAddVar("Particles", "Second Gunflash OffsetZ", &OffsetZ[weapType], nullptr, 0.1f, 0.0f, 50.0f);
             DebugMenuAddInt32("Particles", "Particles testing", &particles, nullptr, 1, PARTICLE_FIRST - 0, MAX_PARTICLES - 1, particleTypes);
             DebugMenuAddInt32("Particles", "Particle objects testing", &particleobjects, nullptr, 1, 0, 21, particleObjectTypes);
             DebugMenuAddInt32("Particles", "Explosions testing", &explosiontype, nullptr, 1, 0, 18, nullptr);

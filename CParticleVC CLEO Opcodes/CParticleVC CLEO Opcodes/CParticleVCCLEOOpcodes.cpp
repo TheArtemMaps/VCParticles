@@ -442,7 +442,7 @@ public:
         CLEO_RegisterOpcode(ADD_JET_EXPLOSION, AddJetExplosionMain); // 1335=5, add_jet_explosion x %1d% y %2d% z %3d% power %4d% size %5d%
         CLEO_RegisterOpcode(REMOVE_PARTICLE_SYSTEM, RemovePSystemMain); // 1333=1, remove_particle_system %1d%
         CLEO_RegisterOpcode(ADD_BIG_GUN_FLASH, AddBigGunFlashMain); // 1341=6, add_big_gun_flash xfrom %1d% yfrom %2d% zfrom %3d% xto %4d% yto %5d% zto %6d%
-        CLEO_RegisterOpcode(ADD_MOVING_PARTICLE_EFFECT, AddParticleObjectMain); // 1342=14, add_moving_particle_effect %1d% x %2d% y %3d% z %4d% xdir %5d% ydir %6d% zdir %7d% scale %8d% r %9d% g %10d% b %11d% a %12d% duration %13d% remove %14d%
+        CLEO_RegisterOpcode(ADD_MOVING_PARTICLE_EFFECT, AddParticleObjectMain); // 1342=15, %1d% = add_moving_particle_effect %2d% x %3d% y %4d% z %5d% xdir %6d% ydir %7d% zdir %8d% scale %9d% r %10d% g %11d% b %12d% a %13d% duration %14d% remove %15d%
         CLEO_RegisterOpcode(REMOVE_PARTICLE_OBJECTS_IN_AREA, RemoveParticleObjectsInAreaMain); // 1343=6, remove_particle_objects_in_area x1 %1d% y1 %2d% z1 %3d% x2 %4d% y2 %5d% z1 %6d%
         CLEO_RegisterOpcode(REMOVE_ALL_EXPIRABLE_PARTICLE_OBJECTS, RemoveAllExpirableParticleObjectsMain); // 1344=0, remove_all_expirable_particle_objects
         CLEO_RegisterOpcode(REMOVE_ALL_PARTICLE_OBJECTS, RemoveAllParticleObjectsMain); // 1345=0, remove_all_particle_objects

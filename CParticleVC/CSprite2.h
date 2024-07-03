@@ -14,10 +14,8 @@ public:
 		float InverseZ;
 		out = TheCamera.m_mViewMatrix * posn;
 
-		if (checkMaxVisible) {
-			if (out.z <= lim || out.z >= CDraw::ms_fFarClipZ)
-				return false;
-		}
+		if (out.z <= lim || out.z >= CDraw::ms_fFarClipZ && checkMaxVisible)
+			return false;
 
 		InverseZ = 1.0f / out.z;
 		out.x = SCREEN_WIDTH * InverseZ * out.x;
@@ -26,6 +24,7 @@ public:
 		h = SCREEN_HEIGHT * InverseZ;
 		w = w / CDraw::ms_fFOV * 70.0f;
 		h = h / CDraw::ms_fFOV * 70.0f;
+		log("CalcScreenCoors lim: %f", lim);
 		return true;
 	}
 	static void FlushSpriteBuffer(void);

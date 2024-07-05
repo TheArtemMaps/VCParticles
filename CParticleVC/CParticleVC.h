@@ -147,5 +147,6 @@ extern RwTexture* coronaringa;
 extern bool ExplosionsParticles;
 extern bool WaterDrops;
 extern bool ParticleExEffects;
+extern bool Trails;
 
 VALIDATE_SIZE(CParticle, 0x58);

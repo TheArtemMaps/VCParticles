@@ -801,19 +801,20 @@ CExplosionVC::RemoveAllExplosionsInArea(CVector pos, float radius)
 class Explosion {
 public:
 	Explosion() {
-		if (ExplosionsParticles) {
-			patch::RedirectJump(0x736A40, CExplosionVC::Initialise);
-			patch::RedirectJump(0x737620, CExplosionVC::Update);
-			patch::RedirectJump(0x736A50, CExplosionVC::AddExplosion);
-			patch::RedirectJump(0x7369E0, CExplosionVC::RemoveAllExplosionsInArea);
-			patch::RedirectJump(0x736950, CExplosionVC::TestForExplosionInArea);
-			patch::RedirectJump(0x736940, CExplosionVC::GetExplosionPosition);
-			patch::RedirectJump(0x736930, CExplosionVC::GetExplosionType);
-			patch::RedirectJump(0x736920, CExplosionVC::DoesExplosionMakeSound);
-			patch::RedirectJump(0x736910, CExplosionVC::ResetExplosionActiveCounter);
-			patch::RedirectJump(0x736840, CExplosionVC::ClearAllExplosions);
-		}
-
+		Events::initRwEvent += []() {
+			if (ExplosionsParticles) {
+				patch::RedirectJump(0x736A40, CExplosionVC::Initialise);
+				patch::RedirectJump(0x737620, CExplosionVC::Update);
+				patch::RedirectJump(0x736A50, CExplosionVC::AddExplosion);
+				patch::RedirectJump(0x7369E0, CExplosionVC::RemoveAllExplosionsInArea);
+				patch::RedirectJump(0x736950, CExplosionVC::TestForExplosionInArea);
+				patch::RedirectJump(0x736940, CExplosionVC::GetExplosionPosition);
+				patch::RedirectJump(0x736930, CExplosionVC::GetExplosionType);
+				patch::RedirectJump(0x736920, CExplosionVC::DoesExplosionMakeSound);
+				patch::RedirectJump(0x736910, CExplosionVC::ResetExplosionActiveCounter);
+				patch::RedirectJump(0x736840, CExplosionVC::ClearAllExplosions);
+			}
+			};
 		/*Events::gameProcessEvent += []() {
 			CExplosionVC::Update();
 		};

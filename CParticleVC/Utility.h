@@ -50,6 +50,7 @@ using namespace plugin;
 #define TWOPI (PI*2)
 #define FIX_BUGS // Undefine to play with bugs
 #define GTAVC_JP_PATCH
+#define EXTENDED_COLOURFILTER
 //#define GTA_SCENE_EDIT
 #define RpAtomicGetFrameMacro(_atomic)                                  \
     ((RwFrame *) rwObjectGetParent(_atomic))

@@ -144,6 +144,8 @@ bool ShatteredGlassParticles = true;
 float lim = 0.2f;
 float OffsetX[1024] = { 0.2f }, OffsetY[1024] = { 0.0f }, OffsetZ[1024] = { 0.0f };
 bool InitializedWeapon[1024] = { false };
+bool Trails = true;
+bool SniperRifleGreenBlur = true;
 enum {
     NUM_RAIN_STREAKS = 35
 };
@@ -1202,6 +1204,8 @@ void CParticle::ReloadConfig()
    // NitroParticles = ini.ReadBoolean("VISUAL", "Nitro particles", true);
     VCIIIDamagedVehicleSmokePos = ini.ReadBoolean("VISUAL", "Use headlights pos for damaged engine smoke", true);
     ShatteredGlassParticles = ini.ReadBoolean("VISUAL", "Replace shattered glass particles", true);
+    Trails = ini.ReadBoolean("VISUAL", "Trails", true);
+    SniperRifleGreenBlur = ini.ReadBoolean("VISUAL", "Green blur for sniper rifles", true);
     GunshellSounds = ini.ReadBoolean("MISC", "Play gunshell sounds", false);
     nParticleCreationInterval = ini.ReadInteger("MISC", "Particles creation interval", 1);
     PARTICLE_WIND_TEST_SCALE = ini.ReadFloat("MISC", "PARTICLE_WIND_TEST_SCALE", 0.002f);
@@ -7520,26 +7524,30 @@ static void __fastcall MyImpactFx(Fx_c* fx, int, CVector& posn, CVector& directi
                 }
     fx->AddBulletImpact(posn, direction, bulletFxType, amount, arg4);
 }
-
+#include "postfx.h"
 class CParticleVC {
 public:
     CParticleVC() {
-        Events::initGameEvent += []() {
+        Events::initRwEvent += []() {
            CDebug::DebugInitTextBuffer();
 #ifdef GTA_SCENE_EDIT
             CSceneEdit::Initialise();
 #endif
-            Memory::InjectHook(0x71D700, CMBlur::MotionBlurRender, PATCH_JUMP);
-            Memory::InjectHook(0x71D710, CMBlur::MotionBlurOpen, PATCH_JUMP);
-            Memory::InjectHook(0x71D720, CMBlur::MotionBlurClose, PATCH_JUMP);
-            Memory::InjectHook(0x71D730, CMBlur::SetDrunkBlur, PATCH_JUMP);
-            Memory::InjectHook(0x71D780, CMBlur::ClearDrunkBlur, PATCH_JUMP);
-            CMBlur::MotionBlurOpen(TheCamera.m_pRwCamera);
+       //     CMBlur::MotionBlurOpen(TheCamera.m_pRwCamera);
+           CPostFX::Open(TheCamera.m_pRwCamera);
+          patch::RedirectJump(0x50B8F0, CMBlur::RenderMotionBlur);
+         //  if (Trails) {
+          //     CPostFX::BlurOn = true;
+         //  }
+         //  SetMotionBlur(CTimeCycle::GetAmbientRed(), CTimeCycle::GetAmbientGreen(), CTimeCycle::GetAmbientBlue(), 5, MOTION_BLUR_LIGHT_SCENE);
+         //   CPostFX::Open(TheCamera.m_pRwCamera);
             };
 
         Events::initRwEvent += []() {
             CParticle::Initialise();
-            log("Injecting patches...");;
+            TheCamera.SetMotionBlur(230, 230, 230, 215, MOTION_BLUR_LIGHT_SCENE);
+       //     SetMotionBlur(255, 255, 255, 0, 0);
+            log("Injecting patches...");
           //  patch::RedirectCall(0x7424CB, MyFireSniper);
          //   Memory::InjectHook(0x4AAC90, &FxSys::DoFxAudio, PATCH_JUMP);
             if (BulletImpactParticles) {
@@ -7799,9 +7807,73 @@ public:
                     //CVector(2486.120605f, -1670.179932f, 13.335947f),
                     vecDir);
             }
+
+        //    SetMotionBlurAlpha(0);
+          //  if (m_BlurType == MOTION_BLUR_NONE || m_BlurType == MOTION_BLUR_SNIPER || m_BlurType == MOTION_BLUR_LIGHT_SCENE)
+           //     SetMotionBlur(0, 0, 0, 0, MOTION_BLUR_NONE);
+
+            static bool isSniperModeActive = false;
+
+            if (SniperRifleGreenBlur) {
+                if (TheCamera.m_PlayerWeaponMode.m_nMode == MODE_SNIPER) {
+                    if (!isSniperModeActive) {
+                    TheCamera.SetMotionBlur(180, 255, 180, 120, MOTION_BLUR_SNIPER);
+                    isSniperModeActive = true;
+                    }
+                }
+                else {
+                    if (isSniperModeActive) {
+                        TheCamera.SetMotionBlur(0, 0, 0, 0, MOTION_BLUR_NONE);
+                        isSniperModeActive = false;
+                    }
+                }
+            }
+            if (FindPlayerPed()->m_pPlayerData->m_nDrunkenness > 0) {
+                CMBlur::SetDrunkBlur(FindPlayerPed()->m_pPlayerData->m_nDrunkenness);
+            }
+
+            if (FindPlayerPed()->m_pPlayerData->m_nDrunkenness == 0) {
+                CMBlur::ClearDrunkBlur();
+            }
+
             if (ParticleObjectsReview) {
                 CParticleObject::AddObject(particleobjects, FindPlayerCoors(-1), true);
             }
+           /*if (m_BlurType == MOTION_BLUR_NONE || m_BlurType == MOTION_BLUR_LIGHT_SCENE) {
+                TheCamera.SetMotionBlur(CTimeCycle::m_CurrentColours.m_nSunCoreRed, CTimeCycle::m_CurrentColours.m_nSunCoreGreen, CTimeCycle::m_CurrentColours.m_nSunCoreBlue, 5, MOTION_BLUR_LIGHT_SCENE);
+            }
+
+            if (m_BlurType == MOTION_BLUR_NONE || m_BlurType == MOTION_BLUR_LIGHT_SCENE && TheCamera.m_bWideScreenOn) {
+                TheCamera.SetMotionBlurAlpha(80);
+            }
+
+            float WaterZ = 0.0f;
+            int BOAT_UNDERWATER_CAM_BLUR = 20;
+            float BOAT_UNDERWATER_CAM_COLORMAG_LIMIT = 10.0f;
+            if (CWaterLevel::GetWaterLevelNoWaves(
+                TheCamera.m_aCams[TheCamera.m_nActiveCam].m_vecSource.x,
+                TheCamera.m_aCams[TheCamera.m_nActiveCam].m_vecSource.y,
+                TheCamera.m_aCams[TheCamera.m_nActiveCam].m_vecSource.z, &WaterZ, nil, nil) && TheCamera.m_aCams[TheCamera.m_nActiveCam].m_vecSource.z < WaterZ) {
+                float WaterLum = Sqrt(SQR(CTimeCycle::m_CurrentColours.m_fWaterRed) + SQR(CTimeCycle::m_CurrentColours.m_fWaterGreen) + SQR(CTimeCycle::m_CurrentColours.m_fWaterBlue));
+                if (WaterLum > BOAT_UNDERWATER_CAM_COLORMAG_LIMIT) {
+                    float f = BOAT_UNDERWATER_CAM_COLORMAG_LIMIT / WaterLum;
+                    TheCamera.SetMotionBlur(CTimeCycle::m_CurrentColours.m_nSunCoreRed * f, CTimeCycle::m_CurrentColours.m_nSunCoreGreen * f, CTimeCycle::m_CurrentColours.m_nSunCoreBlue * f, BOAT_UNDERWATER_CAM_BLUR, MOTION_BLUR_LIGHT_SCENE);
+                }
+                else {
+                    TheCamera.SetMotionBlur(CTimeCycle::m_CurrentColours.m_nSunCoreRed, CTimeCycle::m_CurrentColours.m_nSunCoreGreen, CTimeCycle::m_CurrentColours.m_nSunCoreBlue, BOAT_UNDERWATER_CAM_BLUR, MOTION_BLUR_LIGHT_SCENE);
+                }
+            }
+
+            static bool bExtra1stPrsBlur = false;
+            if (TheCamera.m_aCams[TheCamera.m_nActiveCam].m_nMode == MODE_1STPERSON && FindPlayerVehicle(-1, false) && FindPlayerVehicle(-1, false)->GetUp().z < 0.2f) {
+                TheCamera.SetMotionBlur(230, 230, 230, 215, MOTION_BLUR_LIGHT_SCENE);
+                bExtra1stPrsBlur = true;
+            }
+            else if (bExtra1stPrsBlur) {
+                TheCamera.SetMotionBlur(CTimeCycle::m_CurrentColours.m_nSunCoreRed, CTimeCycle::m_CurrentColours.m_nSunCoreGreen, CTimeCycle::m_CurrentColours.m_nSunCoreBlue, m_motionBlur, MOTION_BLUR_LIGHT_SCENE);
+                bExtra1stPrsBlur = false;
+            }*/
+
             // Detect changes in variables
             if (nParticleCreationInterval != nParticleCreationIntervalnew) {
                 log("Value of nParticleCreationInterval was changed. New value is: %d", nParticleCreationInterval);
@@ -8170,7 +8242,7 @@ public:
             "POBJECT_CATALINAS_SHOTGUNFLASH"
             };
             DebugMenuAddVar("Particles", "Particles scale limit", &fParticleScaleLimit, nullptr, 0.1f, 0.0f, 50.0f);
-            DebugMenuAddVar("Particles", "Drunkness", &CMBlur::Drunkness, nullptr, 0.1f, 0.0f, 10.0f);
+            DebugMenuAddVar("Particles", "Drunkness", &CMBlur::Drunkness, nullptr, 0.1f, 0.0f, 1.0f);
          //   DebugMenuAddVar("Particles", "Second Gunflash OffsetX", &OffsetX[weapType], nullptr, 0.1f, 0.0f, 50.0f);
          //   DebugMenuAddVar("Particles", "Second Gunflash OffsetY", &OffsetY[weapType], nullptr, 0.1f, 0.0f, 50.0f);
         //    DebugMenuAddVar("Particles", "Second Gunflash OffsetZ", &OffsetZ[weapType], nullptr, 0.1f, 0.0f, 50.0f);
@@ -8186,7 +8258,14 @@ public:
             DebugMenuAddVarBool8("Debug", "Scene Edit on", (int8_t*)&CSceneEdit::m_bEditOn, NULL);
 #endif
             //	DebugMenuAddInt32("Particles", "Rainbow", (int32_t*)&rainbow, nullptr, 0.1, 0.0, 1.0, nullptr);
-                //DebugMenuAddVarBool8("Particles", "Toggle trails", (int8_t*)&CMBlur::BlurOn, nullptr);
+            DebugMenuAddVarBool8("Particles", "Toggle trails", (int8_t*)&CMBlur::BlurOn, nullptr);
+            DebugMenuEntry* e;
+            static const char* filternames[] = { "None", "Simple", "Normal", "Mobile" };
+            e = DebugMenuAddVar("Particles", "Colourfilter", &CPostFX::EffectSwitch, nil, 1, CPostFX::POSTFX_OFF, CPostFX::POSTFX_MOBILE, filternames);
+            DebugMenuEntrySetWrap(e, true);
+            DebugMenuAddVar("Particles", "Intensity", &CPostFX::Intensity, nil, 0.05f, 0, 10.0f);
+            DebugMenuAddVarBool8("Particles", "Blur", (int8_t*)&CPostFX::BlurOn, nil);
+            DebugMenuAddVarBool8("Particles", "Motion Blur", (int8_t*)&CPostFX::MotionBlurOn, nil);
             DebugMenuAddVarBool8("Particles", "Toggle particles logging", (int8_t*)&Logging, nullptr);
             // DebugMenuAddVar("Particles", "Drunkness", &CMBlur::Drunkness, nullptr, 0.1f, 0.0f, 1.0f);
            //  DebugMenuAddVarBool8("Particles", "Toggle trails", (int8_t*)&CMBlur::BlurOn, nullptr);
@@ -8207,7 +8286,7 @@ public:
         RenderEffectsEvent += []()
             {
                 CParticle::Render();
-                CMBlur::RenderMotionBlur();
+           //    CMBlur::RenderMotionBlur();
             };
         /*renderBlurEvent += [](CCamera* camera) {
             CMBlur::RenderMotionBlur();
@@ -8561,7 +8640,8 @@ public:
             {
                 CParticleObject::RemoveAllExpireableParticleObjects();
                 CParticle::Shutdown();
-                CMBlur::MotionBlurClose();
+             //  CMBlur::MotionBlurClose();
+                CPostFX::Close();
              //   CParticleObject::SaveParticle(work_buff, (uint*)sizeof(work_buff));
                 // CPlane2::Shutdown();
             };
@@ -9688,3 +9768,15 @@ extern "C" void __declspec(dllexport) LogExport(const char* msg, ...) {
     Log(msg, args);
     va_end(args);
 }
+
+// Set the motion blur
+extern "C" void __declspec(dllexport) SetMotionBlurEx(uint32_t red, uint32_t green, uint32_t blue, uint32_t alpha, int32_t type) {
+    TheCamera.SetMotionBlur(red, green, blue, alpha, type);
+    return;
+}
+
+// Set drunkness (Already exists in SA)
+/*extern "C" void __declspec(dllexport) SetDrunkness(float drunkness) {
+    CMBlur::SetDrunkBlur(drunkness);
+    return;
+}*/

@@ -8,6 +8,7 @@
 #include <ParticleObject.h>
 #include <CRunningScript.h>
 #include <CDebug.h>
+#include <MBlurSA.h>
 using namespace CLEO;
 void ErrorWindowWithName(const char* WindowName, const char* msg, ...)
 {
@@ -37,7 +38,7 @@ using namespace plugin;
 #define UPDATE_BOAT_FOAM_ANIMATION 0x1347
 #define START_BOAT_FOAM_ANIMATION 0x1348
 #define ADD_YARDIE_DOOR_SMOKE 0x1349
-#define REMOVE_PARTICLE_OBJECT 0x1350
+#define SET_MOTION_BLUR 0x1350
 //#define ADD_PARTICLE_ATTACHED_TO_A_VEHICLE 0x1350
 //#define ADD_PARTICLE_ATTACHED_TO_A_OBJECT 0x1351
 // Adding particles with a string
@@ -165,6 +166,21 @@ eParticleObjectType ParticleObjectTypeFromString(const char* typeStr) {
     if (strcmp(typeStr, "CATALINAS_GUNFLASH") == 0) return POBJECT_CATALINAS_GUNFLASH;
     if (strcmp(typeStr, "CATALINAS_SHOTGUNFLASH") == 0) return POBJECT_CATALINAS_SHOTGUNFLASH;
     return POBJECT_UNKNOWN; // Return POBJECT_UNKNOWN for unknown
+}
+
+// Motion blur type from string
+MotionBlurType MotionBlurTypeFromString(const char* typeStr) {
+    if (strcmp(typeStr, "MOTION_BLUR_NONE") == 0) return MOTION_BLUR_NONE;
+    if (strcmp(typeStr, "MOTION_BLUR_SNIPER") == 0) return MOTION_BLUR_SNIPER;
+    if (strcmp(typeStr, "MOTION_BLUR_LIGHT_SCENE") == 0) return MOTION_BLUR_LIGHT_SCENE;
+    if (strcmp(typeStr, "MOTION_BLUR_SECURITY_CAM") == 0) return MOTION_BLUR_SECURITY_CAM;
+    if (strcmp(typeStr, "MOTION_BLUR_CUT_SCENE") == 0) return MOTION_BLUR_CUT_SCENE;
+    if (strcmp(typeStr, "MOTION_BLUR_INTRO") == 0) return MOTION_BLUR_INTRO;
+    if (strcmp(typeStr, "MOTION_BLUR_INTRO2") == 0) return MOTION_BLUR_INTRO2;
+    if (strcmp(typeStr, "MOTION_BLUR_SNIPER_ZOOM") == 0) return MOTION_BLUR_SNIPER_ZOOM;
+    if (strcmp(typeStr, "MOTION_BLUR_INTRO3") == 0) return MOTION_BLUR_INTRO3;
+    if (strcmp(typeStr, "MOTION_BLUR_INTRO4") == 0) return MOTION_BLUR_INTRO4;
+    return (MotionBlurType)-1; // Return -1 for unknown
 }
 
 void AddParticleOpcode(CScriptThread* thread) {
@@ -353,6 +369,18 @@ void RemoveAllExpireableParticleObjectsOpcode(CScriptThread* thread) {
     RemoveAllExpireableParticleObjects();
 }
 
+void SetMotionBlurOpcode(CScriptThread* thread) {
+    char buff[500];
+    auto buffsize = sizeof(buff);
+    int r = CLEO_GetIntOpcodeParam(thread);
+    int g = CLEO_GetIntOpcodeParam(thread);
+    int b = CLEO_GetIntOpcodeParam(thread);
+    int a = CLEO_GetIntOpcodeParam(thread);
+    auto type = CLEO_ReadStringOpcodeParam(thread, buff, buffsize);
+    auto type2 = MotionBlurTypeFromString(type);
+    SetMotionBlurEx(r, g, b, a, type2);
+}
+
 class CParticleVCCLEOOpcodes {
 public:
     static OpcodeResult WINAPI AddParticleMain(CScriptThread* thread) {
@@ -421,6 +449,11 @@ public:
         return OR_CONTINUE;
     }
 
+    static OpcodeResult WINAPI SetMotionBlurMain(CScriptThread* thread) {
+        SetMotionBlurOpcode(thread);
+        return OR_CONTINUE;
+    }
+
     /*static OpcodeResult WINAPI AddParticleAttachedToAObjectMain(CScriptThread* thread) {
         AddParticleAttachedToAObjectOpcode(thread);
         return OR_CONTINUE;
@@ -450,7 +483,7 @@ public:
         CLEO_RegisterOpcode(UPDATE_BOAT_FOAM_ANIMATION, UpdateBoatFoamAnimationMain); // 1347=1, update_boat %1d% foam_animation
         CLEO_RegisterOpcode(START_BOAT_FOAM_ANIMATION, StartBoatFoamAnimationMain); // 1348=0, start_boat_foam_animation
         CLEO_RegisterOpcode(ADD_YARDIE_DOOR_SMOKE, AddYardieDoorSmokeMain); // 1349=4, add_yardie_door_smoke_at x %1d% y %2d% z %3d% attach_to_object %4d%
-      //  CLEO_RegisterOpcode(REMOVE_PARTICLE_OBJECT, RemovePObjectMain); // 1350=1, remove_particle_object %1d%
+        CLEO_RegisterOpcode(SET_MOTION_BLUR, SetMotionBlurMain); // 1350=5, set_motion_blur r %1d% g %2d% b %3d% a %4d% type %5s%
    //     CLEO_RegisterOpcode(ADD_PARTICLE_ATTACHED_TO_A_VEHICLE, AddParticleAttachedToAVehicleMain); // 1350=14, add_particle_attached_to_a_object %1d% xoffset %2d% yoffset %3d% zoffset %4d% xdir %5d% ydir %6d% zdir %7d% size %8d% r %9d% g %10d% b %11d% a %12d% lifespan %13d% object_handle %14d%
     //    CLEO_RegisterOpcode(ADD_PARTICLE_ATTACHED_TO_A_OBJECT, AddParticleAttachedToAObjectMain); // 1351=14, add_particle_attached_to_a_vehicle %1d% xoffset %2d% yoffset %3d% zoffset %4d% xdir %5d% ydir %6d% zdir %7d% size %8d% r %9d% g %10d% b %11d% a %12d% lifespan %13d% vehicle_handle %14d%
     }

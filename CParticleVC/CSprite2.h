@@ -24,7 +24,7 @@ public:
 		h = SCREEN_HEIGHT * InverseZ;
 		w = w / CDraw::ms_fFOV * 70.0f;
 		h = h / CDraw::ms_fFOV * 70.0f;
-		log("CalcScreenCoors lim: %f", lim);
+	//	log("CalcScreenCoors lim: %f", lim);
 		return true;
 	}
 	static void FlushSpriteBuffer(void);

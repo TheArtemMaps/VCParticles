@@ -10,7 +10,8 @@ enum FxType
 	FXTYPE_SPLASH2,
 	FXTYPE_SPLASH3
 };
-enum
+
+enum MotionBlurType
 {
 	MOTION_BLUR_NONE = 0,
 	MOTION_BLUR_SNIPER,
@@ -48,6 +49,10 @@ public:
 	static bool AddRenderFx(RwCamera* cam, RwRect* rect, float z, FxType type);
 	static void OverlayRenderFx(RwCamera* cam, RwRaster* frontBuf);
 };
+void
+SetMotionBlur(int r, int g, int b, int a, int type);
+void
+SetMotionBlurAlpha(int a);
 extern bool clearWaterDrop;
 extern int32_t numWaterDropOnScreen;
 extern RwRaster* gpCarSplashRaster[];
@@ -56,3 +61,4 @@ extern RwRaster* gpDotRaster;
 extern RwRaster* gpRainDripRaster[];
 extern RwRaster* gpRainDripDarkRaster[];
 extern FxType BlurType;
+extern uint32_t m_BlurRed, m_BlurGreen, m_BlurBlue, m_motionBlur, m_BlurType, m_imotionBlurAddAlpha;

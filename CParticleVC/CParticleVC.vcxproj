@@ -123,6 +123,8 @@
     <ClInclude Include="MBlurSA.h" />
     <ClCompile Include="ParticleObject.cpp" />
     <ClInclude Include="ParticleObject.h" />
+	<ClCompile Include="postfx.cpp" />
+    <ClInclude Include="postfx.h" />
     <ClInclude Include="MemoryMgr.h" />
     <ClInclude Include="ini_parser.hpp" />
     <ClInclude Include="IniReader.h" />

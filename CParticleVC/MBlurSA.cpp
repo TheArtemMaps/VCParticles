@@ -22,8 +22,8 @@
 #include "CHud.h"
 #include "Fx_c.h"
 #include "CParticleVC.h"
-//#define LIBRW
-//#define GTA_PS2
+#define LIBRW
+#define GTA_PS2
 using namespace plugin;
 ThiscallEvent    <AddressList<0x53E175, H_CALL>, PRIORITY_AFTER, ArgPickNone, void()> render2dstuff;
 
@@ -34,6 +34,7 @@ ThiscallEvent    <AddressList<0x53E175, H_CALL>, PRIORITY_AFTER, ArgPickNone, vo
 #ifndef LIBRW
 #include <dxsdk/d3d8caps.h>
 #endif
+#include <postfx.h>
 using namespace std;
 
 RwRaster* CMBlur::pFrontBuffer;
@@ -54,131 +55,121 @@ extern "C" D3DCAPS9 _RwD3D8DeviceCaps;
 RwBool
 CMBlur::MotionBlurOpen(RwCamera* cam)
 {
-#ifdef EXTENDED_COLOURFILTER
-	CPostFX::Open(cam);
-	return TRUE;
-#else
+	//else {
 #ifdef GTA_PS2
-	RwRect rect = { 0, 0, 0, 0 };
+		RwRect rect = { 0, 0, 0, 0 };
 
-	if (pFrontBuffer)
-		return TRUE;
+		if (pFrontBuffer)
+			return TRUE;
 
-	BlurOn = true;
+		BlurOn = true;
 
-	rect.w = RwRasterGetWidth(RwCameraGetRaster(cam));
-	rect.h = RwRasterGetHeight(RwCameraGetRaster(cam));
+		rect.w = RwRasterGetWidth(RwCameraGetRaster(cam));
+		rect.h = RwRasterGetHeight(RwCameraGetRaster(cam));
 
-	pFrontBuffer = RwRasterCreate(0, 0, 0, rwRASTERDONTALLOCATE | rwRASTERTYPECAMERATEXTURE);
-	if (!pFrontBuffer)
-	{
-		log("Error creating raster\n");
-		return FALSE;
-	}
+		pFrontBuffer = RwRasterCreate(0, 0, 0, rwRASTERDONTALLOCATE | rwRASTERTYPECAMERATEXTURE);
+		if (!pFrontBuffer)
+		{
+			log("Error creating raster\n");
+			return FALSE;
+		}
 
-	RwRaster* raster = RwRasterSubRaster(pFrontBuffer, RwCameraGetRaster(cam), &rect);
-	if (!raster)
-	{
-		RwRasterDestroy(pFrontBuffer);
-		pFrontBuffer = NULL;
-		log("Error subrastering\n");
-		return FALSE;
-	}
+		RwRaster* raster = RwRasterSubRaster(pFrontBuffer, RwCameraGetRaster(cam), &rect);
+		if (!raster)
+		{
+			RwRasterDestroy(pFrontBuffer);
+			pFrontBuffer = NULL;
+			log("Error subrastering\n");
+			return FALSE;
+		}
 
-	CreateImmediateModeData(cam, &rect);
+		CreateImmediateModeData(cam, &rect);
 #else
-	RwRect rect = { 0, 0, 0, 0 };
+		RwRect rect = { 0, 0, 0, 0 };
 
-	if (pFrontBuffer)
-		MotionBlurClose();
+		if (pFrontBuffer)
+			MotionBlurClose();
 
 #ifndef LIBRW
 	//	extern void _GetVideoMemInfo(LPDWORD total, LPDWORD avaible);
-		//DWORD total, avaible;
+	//	DWORD total, avaible;
 
-		//_GetVideoMemInfo(&total, &avaible);
-	//	debug("Available video memory %d\n", avaible);
-	//	log("Available video memory %d\n", avaible);
+	//	_GetVideoMemInfo(&total, &avaible);
+		//debug("Available video memory %d\n", avaible);
 #endif
-
-	if (BlurOn)
-	{
-		uint32_t width = Pow(2.0f, int32_t(log2(RwRasterGetWidth(RwCameraGetRaster(cam)))) + 1);
-		uint32_t height = Pow(2.0f, int32_t(log2(RwRasterGetHeight(RwCameraGetRaster(cam)))) + 1);
-		uint32_t depth = RwRasterGetDepth(RwCameraGetRaster(cam));
-
-		/*#ifndef LIBRW
-				extern DWORD _dwMemTotalVideo;
-				auto* caps = RwD3D9GetCaps2();
-				auto* dev = RwD3D9GetCurrentD3DDevice2();
-				dev->GetDeviceCaps(&_RwD3D8DeviceCaps);
-				if (_RwD3D8DeviceCaps.MaxTextureWidth >= width && _RwD3D8DeviceCaps.MaxTextureHeight >= height)
-				{
-					total = _dwMemTotalVideo - 3 *
-						(RwRasterGetDepth(RwCameraGetRaster(cam))
-							* RwRasterGetHeight(RwCameraGetRaster(cam))
-							* RwRasterGetWidth(RwCameraGetRaster(cam)) / 8);
-					BlurOn = total >= height * width * (depth / 8) + (12 * 1024 * 1024);
-				}
-				else
-					BlurOn = false;
-		#endif*/
 
 		if (BlurOn)
 		{
-			ms_bScaledBlur = false;
-			rect.w = width;
-			rect.h = height;
+			uint32 width = Pow(2.0f, int32(log2(RwRasterGetWidth(RwCameraGetRaster(cam)))) + 1);
+			uint32 height = Pow(2.0f, int32(log2(RwRasterGetHeight(RwCameraGetRaster(cam)))) + 1);
+			uint32 depth = RwRasterGetDepth(RwCameraGetRaster(cam));
 
-			pFrontBuffer = RwRasterCreate(rect.w, rect.h, depth, rwRASTERTYPECAMERATEXTURE);
-			if (!pFrontBuffer)
+#ifndef LIBRW
+			/*extern DWORD _dwMemTotalVideo;
+			if (_RwD3D8DeviceCaps.MaxTextureWidth >= width && _RwD3D8DeviceCaps.MaxTextureHeight >= height)
 			{
-				log("MBlurOpen can't create raster.");
-				debug("MBlurOpen can't create raster.");
-				BlurOn = false;
+				total = _dwMemTotalVideo - 3 *
+					(RwRasterGetDepth(RwCameraGetRaster(cam))
+						* RwRasterGetHeight(RwCameraGetRaster(cam))
+						* RwRasterGetWidth(RwCameraGetRaster(cam)) / 8);
+				BlurOn = total >= height * width * (depth / 8) + (12 * 1024 * 1024) //12 MB;
+			}
+			else
+				BlurOn = false;*/
+#endif
+
+			if (BlurOn)
+			{
+				ms_bScaledBlur = false;
+				rect.w = width;
+				rect.h = height;
+
+				pFrontBuffer = RwRasterCreate(rect.w, rect.h, depth, rwRASTERTYPECAMERATEXTURE);
+				if (!pFrontBuffer)
+				{
+					log("MBlurOpen can't create raster.");
+					BlurOn = false;
+					rect.w = RwRasterGetWidth(RwCameraGetRaster(cam));
+					rect.h = RwRasterGetHeight(RwCameraGetRaster(cam));
+				}
+				else
+					ms_bJustInitialised = true;
+			}
+			else
+			{
 				rect.w = RwRasterGetWidth(RwCameraGetRaster(cam));
 				rect.h = RwRasterGetHeight(RwCameraGetRaster(cam));
 			}
-			else
-				ms_bJustInitialised = true;
+
+#ifndef LIBRW
+			//_GetVideoMemInfo(&total, &avaible);
+		//	log("Available video memory %d\n", avaible);
+#endif
+			CreateImmediateModeData(cam, &rect);
 		}
 		else
 		{
 			rect.w = RwRasterGetWidth(RwCameraGetRaster(cam));
 			rect.h = RwRasterGetHeight(RwCameraGetRaster(cam));
+			CreateImmediateModeData(cam, &rect);
 		}
 
-#ifndef LIBRW
-		//	_GetVideoMemInfo(&total, &avaible);
-		//	debug("Available video memory %d\n", avaible);
+		return TRUE;
 #endif
-		CreateImmediateModeData(cam, &rect);
-	}
-	else
-	{
-		rect.w = RwRasterGetWidth(RwCameraGetRaster(cam));
-		rect.h = RwRasterGetHeight(RwCameraGetRaster(cam));
-		CreateImmediateModeData(cam, &rect);
-	}
-
-	return TRUE;
-#endif
-#endif
+//	}
 }
 
 RwBool
 CMBlur::MotionBlurClose(void)
 {
-#ifdef EXTENDED_COLOURFILTER
-	CPostFX::Close();
-#else
-	if (pFrontBuffer) {
-		RwRasterDestroy(pFrontBuffer);
-		pFrontBuffer = NULL;
+	//else {
+		if (pFrontBuffer) {
+			RwRasterDestroy(pFrontBuffer);
+			pFrontBuffer = nil;
 
-		return TRUE;
-	}
-#endif
+			return TRUE;
+		}
+//	}
 	return FALSE;
 }
 
@@ -355,28 +346,25 @@ CMBlur::CreateImmediateModeData(RwCamera* cam, RwRect* rect, RwIm2DVertex* verts
 void
 CMBlur::MotionBlurRender(RwCamera* cam, uint32_t red, uint32_t green, uint32_t blue, uint32_t blur, int32_t type, uint32_t bluralpha)
 {
-#ifdef EXTENDED_COLOURFILTER
-	CPostFX::Render(cam, red, green, blue, blur, type, bluralpha);
-#else
-	//	PUSH_RENDERGROUP("CMBlur::MotionBlurRender");
-	RwRGBA color = { (RwUInt8)red, (RwUInt8)green, (RwUInt8)blue, (RwUInt8)blur };
+	//else {
+		//	PUSH_RENDERGROUP("CMBlur::MotionBlurRender");
+		RwRGBA color = { (RwUInt8)red, (RwUInt8)green, (RwUInt8)blue, (RwUInt8)blur };
 #ifdef GTA_PS2
-	if (pFrontBuffer)
-		OverlayRender(cam, pFrontBuffer, color, type, bluralpha);
+		if (pFrontBuffer)
+			OverlayRender(cam, pFrontBuffer, color, type, bluralpha);
 #else
-	if (ms_bJustInitialised)
-		ms_bJustInitialised = false;
-	else
-		//	DefinedState();
-		OverlayRender(cam, pFrontBuffer, color, type, bluralpha);
-	if (BlurOn) {
-		RwRasterPushContext(pFrontBuffer);
-		RwRasterRenderFast(RwCameraGetRaster(cam), 0, 0);
-		RwRasterPopContext();
-	}
+		if (ms_bJustInitialised)
+			ms_bJustInitialised = false;
+		else
+			OverlayRender(cam, pFrontBuffer, color, type, bluralpha);
+		if (BlurOn) {
+			RwRasterPushContext(pFrontBuffer);
+			RwRasterRenderFast(RwCameraGetRaster(cam), 0, 0);
+			RwRasterPopContext();
+		}
 #endif
-	//POP_RENDERGROUP();
-#endif
+		//	POP_RENDERGROUP();
+	//}
 }
 
 static uint8_t DrunkBlurRed = 128;
@@ -396,7 +384,7 @@ CMBlur::OverlayRender(RwCamera* cam, RwRaster* raster, RwRGBA color, int32_t typ
 
 	DefinedState();
 
-	switch (type)
+	/*switch (type)
 	{
 	case MOTION_BLUR_SECURITY_CAM:
 		r = 0;
@@ -450,7 +438,7 @@ CMBlur::OverlayRender(RwCamera* cam, RwRaster* raster, RwRGBA color, int32_t typ
 		RwIm2DVertexSetIntRGBA(&Vertex[2], r, g, b, a);
 		RwIm2DVertexSetIntRGBA(&Vertex2[3], r, g, b, a);
 		RwIm2DVertexSetIntRGBA(&Vertex[3], r, g, b, a);
-	}
+	}*/
 
 	RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERNEAREST);
 	RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)FALSE);
@@ -462,7 +450,7 @@ CMBlur::OverlayRender(RwCamera* cam, RwRaster* raster, RwRGBA color, int32_t typ
 	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
 	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDONE);
 
-	if (BlurOn) {
+	/*if (BlurOn) {
 		if (type == MOTION_BLUR_SNIPER) {
 			RwIm2DVertexSetIntRGBA(&Vertex2[0], r, g, b, 80);
 			RwIm2DVertexSetIntRGBA(&Vertex2[1], r, g, b, 80);
@@ -496,7 +484,7 @@ CMBlur::OverlayRender(RwCamera* cam, RwRaster* raster, RwRGBA color, int32_t typ
 			RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, Vertex, 4, Index, 6);
 			RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, Vertex2, 4, Index, 6);
 		}
-	}
+	}*/
 
 	int DrunkBlurAlpha = 175.0f * Drunkness;
 	if (DrunkBlurAlpha != 0) {
@@ -531,8 +519,8 @@ CMBlur::OverlayRender(RwCamera* cam, RwRaster* raster, RwRGBA color, int32_t typ
 		RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, Vertex, 4, Index, 6);
 	}
 
-	if (type != MOTION_BLUR_SNIPER)
-		OverlayRenderFx(cam, pFrontBuffer);
+	//if (type != MOTION_BLUR_SNIPER)
+	//	OverlayRenderFx(cam, pFrontBuffer);
 
 	RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)FALSE);
 	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)TRUE);
@@ -547,6 +535,9 @@ void
 CMBlur::SetDrunkBlur(float drunkness)
 {
 	Drunkness = Clamp(drunkness, 0.0f, 1.0f);
+	if (drunkness > 0.5f) {
+		TheCamera.SetMotionBlur(255, 255, 255, 120, MOTION_BLUR_SNIPER);
+	}
 }
 
 void
@@ -869,12 +860,11 @@ SetMotionBlurAlpha(int a)
 void
 CMBlur::RenderMotionBlur(void)
 {
-	//if (TheCamera.m_BlurType == 0)
-		//return;
-//	DefinedState();
-	CMBlur::MotionBlurRender(TheCamera.m_pRwCamera,
-		TheCamera.m_nBlurRed, TheCamera.m_nBlurGreen, TheCamera.m_nBlurBlue,
-		TheCamera.m_nMotionBlur, TheCamera.m_nBlurType, TheCamera.m_nMotionBlurAddAlpha);
+	if (TheCamera.m_nBlurType)
+
+		CPostFX::Render(TheCamera.m_pRwCamera,
+			TheCamera.m_nBlurRed, TheCamera.m_nBlurGreen, TheCamera.m_nBlurBlue,
+			TheCamera.m_nMotionBlur, TheCamera.m_nBlurType, TheCamera.m_nMotionBlurAddAlpha);
 }
 CdeclEvent<AddressList<0x53EB12, H_CALL>, PRIORITY_AFTER, ArgPickNone, void()> Render;
 /*class MBlurSA {

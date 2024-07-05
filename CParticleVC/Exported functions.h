@@ -4,6 +4,7 @@ const uint32_t GetExportedFunction(const char* szExportName)
 {
     return reinterpret_cast<const uint32_t>(GetProcAddress(GetModuleHandleA("CParticleVC.SA.asi"), szExportName));
 }
+
 void __cdecl AddParticle(int type, float x, float y, float z, float xdir, float ydir, float zdir, float fSize, RwUInt8 r, RwUInt8 g, RwUInt8 b, RwUInt8 a, int32_t LifeSpan) {
     return ((void(__cdecl*)(int, float, float, float, float, float, float, float, RwUInt8, RwUInt8, RwUInt8, RwUInt8, int32_t))GetExportedFunction("AddParticle"))(type, x, y, z, xdir, ydir, zdir, fSize, r, g, b, a, LifeSpan);
 }
@@ -73,4 +74,8 @@ void __cdecl LogExport(const char* msg, ...) {
     va_start(args, msg);
     return ((void(__cdecl*)(const char*, ...))GetExportedFunction("LogExport"))(msg, args);
     va_end(args);
+}
+
+void __cdecl SetMotionBlurEx(uint32_t red, uint32_t green, uint32_t blue, uint32_t alpha, int32_t type) {
+    return ((void(__cdecl*)(uint32_t, uint32_t, uint32_t, uint32_t, int32_t))GetExportedFunction("SetMotionBlurEx"))(red, green, blue, alpha, type);
 }

@@ -183,12 +183,12 @@ CPostFX::Open(RwCamera* cam)
 	RwIm2DVertexSetIntRGBA(&Vertex3[3], 255, 255, 255, 255);
 
 
-#ifdef RW_D3D9
+/*#ifdef RW_D3D9
 #include "shaders/obj/colourfilterVC_PS.inc"
-	colourfilterVC_PS = rw::d3d::createPixelShader(colourfilterVC_PS_cso);
+	colourfilterVC_PS = RwD3D9CreatePixelShader(colourfilterVC_PS_cso);
 #include "shaders/obj/contrastPS.inc"
 	contrast_PS = rw::d3d::createPixelShader(contrastPS_cso);
-#endif
+#endif*/
 #ifdef RW_OPENGL
 	using namespace rw::gl3;
 
@@ -226,11 +226,11 @@ CPostFX::Close(void)
 	}
 #ifdef RW_D3D9
 	if (colourfilterVC_PS) {
-		rw::d3d::destroyPixelShader(colourfilterVC_PS);
+	//	rw::d3d::destroyPixelShader(colourfilterVC_PS);
 		colourfilterVC_PS = nil;
 	}
 	if (contrast_PS) {
-		rw::d3d::destroyPixelShader(contrast_PS);
+		//RwD3DShader(contrast_PS);
 		contrast_PS = nil;
 	}
 #endif
@@ -315,10 +315,10 @@ CPostFX::RenderOverlayShader(RwCamera* cam, int32 r, int32 g, int32 b, int32 a)
 		add[1] = g / 1536.f - 0.05f;
 		add[2] = b / 1536.f - 0.05f;
 #ifdef RW_D3D9
-		rw::d3d::d3ddevice->SetPixelShaderConstantF(10, mult, 1);
-		rw::d3d::d3ddevice->SetPixelShaderConstantF(11, add, 1);
+		_rwD3D9SetPixelShaderConstant(10, mult, 1);
+		_rwD3D9SetPixelShaderConstant(11, add, 1);
 
-		rw::d3d::im2dOverridePS = contrast_PS;
+		//RwIm2Dinstant = contrast_PS;
 #endif
 #ifdef RW_OPENGL
 		rw::gl3::im2dOverrideShader = contrast;
@@ -335,8 +335,8 @@ CPostFX::RenderOverlayShader(RwCamera* cam, int32 r, int32 g, int32 b, int32 a)
 		blurcolors[2] = b * f / 255.0f;
 		blurcolors[3] = 30 / 255.0f;
 #ifdef RW_D3D9
-		rw::d3d::d3ddevice->SetPixelShaderConstantF(10, blurcolors, 1);
-		rw::d3d::im2dOverridePS = colourfilterVC_PS;
+		_rwD3D9SetPixelShaderConstant(10, blurcolors, 1);
+	//	rw::d3d::im2dOverridePS = colourfilterVC_PS;
 #endif
 #ifdef RW_OPENGL
 		rw::gl3::im2dOverrideShader = colourFilterVC;
@@ -346,7 +346,7 @@ CPostFX::RenderOverlayShader(RwCamera* cam, int32 r, int32 g, int32 b, int32 a)
 	}
 	RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, Vertex, 4, Index, 6);
 #ifdef RW_D3D9
-	rw::d3d::im2dOverridePS = nil;
+//	rw::d3d::im2dOverridePS = nil;
 #endif
 #ifdef RW_OPENGL
 	rw::gl3::im2dOverrideShader = nil;
@@ -367,7 +367,7 @@ CPostFX::RenderMotionBlur(RwCamera* cam, uint32 blur)
 	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
 	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
 	if (CMBlur::Drunkness > 0.0f) {
-		if (!Trails) {
+		if (!Pulsating) {
 			RwIm2DVertexSetIntRGBA(&Vertex[0], 255, 255, 255, blur);
 			RwIm2DVertexSetIntRGBA(&Vertex[1], 255, 255, 255, blur);
 			RwIm2DVertexSetIntRGBA(&Vertex[2], 255, 255, 255, blur);
@@ -429,10 +429,11 @@ CPostFX::NeedBackBuffer(void)
 bool
 CPostFX::NeedFrontBuffer(int32 type)
 {
+	auto weapType = FindPlayerPed()->m_aWeapons[FindPlayerPed()->m_nActiveWeaponSlot].m_eWeaponType;
 	// Last frame -- needed for motion blur
 	if (CMBlur::Drunkness > 0.0f)
 		return true;
-	if (type == MOTION_BLUR_SNIPER)
+	if (type == MOTION_BLUR_SNIPER && SniperRifleGreenBlur[weapType])
 		return true;
 
 	switch (EffectSwitch) {
@@ -462,11 +463,11 @@ CPostFX::GetBackBuffer(RwCamera* cam)
 void
 CPostFX::Render(RwCamera* cam, uint32 red, uint32 green, uint32 blue, uint32 blur, int32 type, uint32 bluralpha)
 {
-
+	auto weapType = FindPlayerPed()->m_aWeapons[FindPlayerPed()->m_nActiveWeaponSlot].m_eWeaponType;
 	if (pFrontBuffer == nil)
 		Open(cam);
-	assert(pFrontBuffer);
-	assert(pBackBuffer);
+	assert(pFrontBuffer, ERROR_NULL_POINTER);
+	assert(pBackBuffer, ERROR_NULL_POINTER);
 
 	if (type == MOTION_BLUR_LIGHT_SCENE) {
 		SmoothColor(red, green, blue, blur);
@@ -486,7 +487,7 @@ CPostFX::Render(RwCamera* cam, uint32 red, uint32 green, uint32 blue, uint32 blu
 	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)FALSE);
 	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)FALSE);
 
-	if (type == MOTION_BLUR_SNIPER) {
+	if (type == MOTION_BLUR_SNIPER && SniperRifleGreenBlur[weapType]) {
 		if (!bJustInitialised)
 			RenderOverlaySniper(cam, red, green, blue, blur);
 	}

@@ -7,6 +7,7 @@
 #include "IniReader.h"
 #include <CTxdStore.h>
 #include <CParticleVC.h>
+#include <filesystem>
 using namespace std;
 uint8_t work_buff[55000];
 cParticleSystemMgr mod_ParticleSystemManager;
@@ -262,7 +263,7 @@ void cParticleSystemMgr::LoadParticleData()
 		log("ParticleEx = false, using particle.cfg from %s", ParticleFilename);
 	}
 	//CFileMgr::SetDir("");
-	if (!FileExists(ParticleFilename)) {
+	if (!std::filesystem::exists(ParticleFilename)) {
 		ErrorWindow("particle.cfg is missing from %s, please install it! Exiting game...", PLUGIN_PATH((char*)"data"));
 		return;
 		//MessageBoxA(HWND_DESKTOP, "particle.cfg is missing from data folder. Exiting game...", "CParticleVC.SA.asi", MB_ICONERROR);
@@ -280,15 +281,15 @@ void cParticleSystemMgr::LoadParticleData()
 
 	while (true)
 	{
-		ASSERT(lineStart != NULL);
-		ASSERT(lineEnd != NULL);
+		ASSERT(lineStart != NULL, ERROR_NULL_POINTER);
+		ASSERT(lineEnd != NULL, ERROR_NULL_POINTER);
 
 		while (*lineEnd != '\n')
 			++lineEnd;
 
 		int32_t lineLength = lineEnd - lineStart;
 
-		ASSERT(lineLength < 500);
+		ASSERT(lineLength < 500, ERROR_LINE_TOO_LONG);
 
 		strncpy(line, lineStart, lineLength);
 
@@ -305,16 +306,16 @@ void cParticleSystemMgr::LoadParticleData()
 
 			char* value = strtok(line, delims);
 
-			ASSERT(value != NULL);
+			ASSERT(value != NULL, ERROR_NULL_POINTER);
 
 			do
 			{
 				switch (param)
 				{
 				case CFG_PARAM_PARTICLE_TYPE_NAME:
-					ASSERT(type < MAX_PARTICLES); // To make sure that there's no extra particles that don't even exist
+					ASSERT(type < MAX_PARTICLES, ERROR_EXTRA_PARTICLES); // To make sure that there's no extra particles that don't even exist
 					entry = &m_aParticles[type];
-					ASSERT(entry != NULL);
+					ASSERT(entry != NULL, ERROR_MISSING_ENTRY);
 					entry->m_Type = (tParticleType)type++;
 					strcpy(entry->m_aName, value);
 					break;

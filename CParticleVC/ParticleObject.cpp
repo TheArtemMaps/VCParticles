@@ -414,7 +414,7 @@ CParticleObject::AddObject(tParticleType type, CVector const& pos, CVector const
 {
 	CParticleObject* pobj = pUnusedListHead;
 
-	ASSERT(pobj != NULL);
+	ASSERT(pobj != NULL, ERROR_NULL_POINTER);
 
 	if (pobj == NULL)
 	{
@@ -1216,8 +1216,8 @@ SaveOneParticle(CParticleObject* p, uint8_t*& buffer)
 bool
 CParticleObject::SaveParticle(uint8_t* buffer, uint32_t* length)
 {
-	ASSERT(buffer != NULL);
-	ASSERT(length != NULL);
+	ASSERT(buffer != NULL, ERROR_NULL_POINTER);
+	ASSERT(length != NULL, ERROR_NULL_POINTER);
 
 	int32_t numObjects = 0;
 
@@ -1269,7 +1269,7 @@ CParticleObject::SaveParticle(uint8_t* buffer, uint32_t* length)
 bool
 CParticleObject::LoadParticle(uint8_t* buffer, uint32_t  length)
 {
-	ASSERT(buffer != NULL);
+	ASSERT(buffer != NULL, ERROR_NULL_POINTER);
 
 	RemoveAllParticleObjects();
 
@@ -1427,9 +1427,9 @@ CParticleObject::RemoveAllParticleObjects(void)
 void
 CParticleObject::MoveToList(CParticleObject** from, CParticleObject** to, CParticleObject* obj)
 {
-	ASSERT(from != NULL);
-	ASSERT(to != NULL);
-	ASSERT(obj != NULL);
+	ASSERT(from != NULL, ERROR_NULL_POINTER);
+	ASSERT(to != NULL, ERROR_NULL_POINTER);
+	ASSERT(obj != NULL, ERROR_NULL_POINTER);
 	const char* fromType = *from ? ParticleObjectTypeToString((*from)->m_Type) : "Empty list";
 	const char* toType = *to ? ParticleObjectTypeToString((*to)->m_Type) : "Empty list";
 	if (obj->m_pPrev == NULL)

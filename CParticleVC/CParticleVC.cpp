@@ -145,7 +145,9 @@ float lim = 0.2f;
 float OffsetX[1024] = { 0.2f }, OffsetY[1024] = { 0.0f }, OffsetZ[1024] = { 0.0f };
 bool InitializedWeapon[1024] = { false };
 bool Trails = true;
-bool SniperRifleGreenBlur = true;
+bool Pulsating = true;
+bool SniperGreenBlur = false;
+bool SniperRifleGreenBlur[1024] = { true };
 enum {
     NUM_RAIN_STREAKS = 35
 };
@@ -1143,8 +1145,7 @@ void CParticle::ReloadConfig()
     CIniReader ini(PLUGIN_PATH((char*)"CParticleVC.ini"));
     for (int32_t i = 0; i < 1024; i++) {
         auto string1 = std::format("{}{}", "VEH", i);
-        auto string2 = string1.c_str();
-        bool Should = ini.ReadBoolean(string2, "Should have fire on exhaust", false);
+        bool Should = ini.ReadBoolean(string1, "Should have fire on exhaust", false);
         if (Should != false) { // Check if the section exists by checking a default value
             InitializedVehicle[i] = true;
             ShouldHaveFireExhaust[i] = Should;
@@ -1205,7 +1206,7 @@ void CParticle::ReloadConfig()
     VCIIIDamagedVehicleSmokePos = ini.ReadBoolean("VISUAL", "Use headlights pos for damaged engine smoke", true);
     ShatteredGlassParticles = ini.ReadBoolean("VISUAL", "Replace shattered glass particles", true);
     Trails = ini.ReadBoolean("VISUAL", "Trails", true);
-    SniperRifleGreenBlur = ini.ReadBoolean("VISUAL", "Green blur for sniper rifles", true);
+    Pulsating = ini.ReadBoolean("VISUAL", "Black pulsating during drunkness", true);
     GunshellSounds = ini.ReadBoolean("MISC", "Play gunshell sounds", false);
     nParticleCreationInterval = ini.ReadInteger("MISC", "Particles creation interval", 1);
     PARTICLE_WIND_TEST_SCALE = ini.ReadFloat("MISC", "PARTICLE_WIND_TEST_SCALE", 0.002f);
@@ -1214,13 +1215,19 @@ void CParticle::ReloadConfig()
     lim = ini.ReadFloat("MISC", "Min distance to camera", 0.2f);
     for (int32_t i = 0; i < 1024; ++i) {
         auto string1 = std::format("{}{}", "WEAP", i);
-        auto string2 = string1.c_str();
-        float x = ini.ReadFloat(string2, "Second gunflash offset x", -1);
+        
+        bool Blur = ini.ReadBoolean(string1, "Green blur for sniper rifles", false);
+        if (Blur != false) {
+            InitializedWeapon[i] = true;
+            SniperRifleGreenBlur[i] = Blur;
+            log("Section1 (Sniper rifle blur): %s", string1);
+        }
+        float x = ini.ReadFloat(string1, "Second gunflash offset x", -1);
         if (x != -1) {
             InitializedWeapon[i] = true;
             OffsetX[i] = x;
-            OffsetY[i] = ini.ReadFloat(string2, "Second gunflash offset y", 0.0f);
-            OffsetZ[i] = ini.ReadFloat(string2, "Second gunflash offset z", 0.0f);
+            OffsetY[i] = ini.ReadFloat(string1, "Second gunflash offset y", 0.0f);
+            OffsetZ[i] = ini.ReadFloat(string1, "Second gunflash offset z", 0.0f);
             log("Section1 (Weapons): %s", string1);
         }
     }
@@ -1331,129 +1338,129 @@ void CParticle::Initialise()
     for (int32_t i = 0; i < MAX_SMOKE_FILES; i++)
     {
         gpSmokeTex[i] = RwTextureRead(SmokeFiles[i], nullptr);
-        assert(gpSmokeTex[i] != NULL);
+        assert(gpSmokeTex[i] != NULL, ERROR_TEXTURE_MISSING);
         gpSmokeRaster[i] = RwTextureGetRaster(gpSmokeTex[i]);
     }
 
     gpSmoke2Tex = RwTextureRead("smokeII_3", nullptr);
-    assert(gpSmoke2Tex != NULL);
+    assert(gpSmoke2Tex != NULL, ERROR_TEXTURE_MISSING);
     gpSmoke2Raster = RwTextureGetRaster(gpSmoke2Tex);
 
     for (int32_t i = 0; i < MAX_RUBBER_FILES; i++)
     {
         gpRubberTex[i] = RwTextureRead(RubberFiles[i], nullptr);
-        assert(gpRubberTex[i] != NULL);
+        assert(gpRubberTex[i] != NULL, ERROR_TEXTURE_MISSING);
         gpRubberRaster[i] = RwTextureGetRaster(gpRubberTex[i]);
     }
 
     for (int32_t i = 0; i < MAX_RAINSPLASH_FILES; i++)
     {
         gpRainSplashTex[i] = RwTextureRead(RainSplashFiles[i], nullptr);
-        assert(gpRainSplashTex[i] != NULL);
+        assert(gpRainSplashTex[i] != NULL, ERROR_TEXTURE_MISSING);
         gpRainSplashRaster[i] = RwTextureGetRaster(gpRainSplashTex[i]);
     }
 
     for (int32_t i = 0; i < MAX_WATERSPRAY_FILES; i++)
     {
         gpWatersprayTex[i] = RwTextureRead(WatersprayFiles[i], nullptr);
-        assert(gpWatersprayTex[i] != NULL);
+        assert(gpWatersprayTex[i] != NULL, ERROR_TEXTURE_MISSING);
         gpWatersprayRaster[i] = RwTextureGetRaster(gpWatersprayTex[i]);
     }
 
     for (int32_t i = 0; i < MAX_EXPLOSIONMEDIUM_FILES; i++)
     {
         gpExplosionMediumTex[i] = RwTextureRead(ExplosionMediumFiles[i], nullptr);
-        assert(gpExplosionMediumTex[i] != NULL);
+        assert(gpExplosionMediumTex[i] != NULL, ERROR_TEXTURE_MISSING);
         gpExplosionMediumRaster[i] = RwTextureGetRaster(gpExplosionMediumTex[i]);
     }
 
     for (int32_t i = 0; i < MAX_EXPLOSIONMASSIVE_FILES; i++)
     {
         gpExplosionMassiveTex[i] = RwTextureRead(ExplosionMassiveFiles[i], nullptr);
-        assert(gpExplosionMassiveTex[i] != NULL);
+        assert(gpExplosionMassiveTex[i] != NULL, ERROR_TEXTURE_MISSING);
         gpExplosionMassiveRaster[i] = RwTextureGetRaster(gpExplosionMassiveTex[i]);
     }
 
     for (int32_t i = 0; i < MAX_EXPLOSIONPARTICLEEX_FILES; i++)
     {
         gpExplosionParticleEXTex[i] = RwTextureRead(ExplosionParticleEXFiles[i], nullptr);
-        assert(gpExplosionParticleEXTex[i] != NULL);
+        assert(gpExplosionParticleEXTex[i] != NULL, ERROR_TEXTURE_MISSING);
         gpExplosionParticleEXRaster[i] = RwTextureGetRaster(gpExplosionParticleEXTex[i]);
     }
 
     for (int32_t i = 0; i < MAX_GUNFLASH_FILES; i++)
     {
         gpGunFlashTex[i] = RwTextureRead(GunFlashFiles[i], nullptr);
-        assert(gpGunFlashTex[i] != NULL);
+        assert(gpGunFlashTex[i] != NULL, ERROR_TEXTURE_MISSING);
         gpGunFlashRaster[i] = RwTextureGetRaster(gpGunFlashTex[i]);
     }
 
     for (int32_t i = 0; i < MAX_GUNFLASHVCS_FILES; i++)
     {
         gpGunFlashTexVCS[i] = RwTextureRead(GunFlashFilesVCS[i], nullptr);
-        assert(gpGunFlashTexVCS[i] != NULL);
+        assert(gpGunFlashTexVCS[i] != NULL, ERROR_TEXTURE_MISSING);
         gpGunFlashRasterVCS[i] = RwTextureGetRaster(gpGunFlashTexVCS[i]);
     }
 
     gpRainDropTex = RwTextureRead("raindrop4", nullptr);
-    assert(gpRainDropTex != NULL);
+    assert(gpRainDropTex != NULL, ERROR_TEXTURE_MISSING);
     gpRainDropRaster = RwTextureGetRaster(gpRainDropTex);
 
     // Snow
     gpSnowTex = RwTextureRead("snowflake", nullptr);
-    assert(gpSnowTex != NULL);
+    assert(gpSnowTex != NULL, ERROR_TEXTURE_MISSING);
     gpSnowRaster = RwTextureGetRaster(gpSnowTex);
 
     for (int32_t i = 0; i < MAX_RAINSPLASHUP_FILES; i++)
     {
         gpRainSplashupTex[i] = RwTextureRead(RainSplashupFiles[i], nullptr);
-        assert(gpRainSplashupTex[i] != NULL);
+        assert(gpRainSplashupTex[i] != NULL, ERROR_TEXTURE_MISSING);
         gpRainSplashupRaster[i] = RwTextureGetRaster(gpRainSplashupTex[i]);
     }
 
     for (int32_t i = 0; i < MAX_BIRDFRONT_FILES; i++)
     {
         gpBirdfrontTex[i] = RwTextureRead(BirdfrontFiles[i], nullptr);
-        assert(gpBirdfrontTex[i] != NULL);
+        assert(gpBirdfrontTex[i] != NULL, ERROR_TEXTURE_MISSING);
         gpBirdfrontRaster[i] = RwTextureGetRaster(gpBirdfrontTex[i]);
     }
 
     for (int32_t i = 0; i < MAX_BOAT_FILES; i++)
     {
         gpBoatTex[i] = RwTextureRead(BoatFiles[i], nullptr);
-        assert(gpBoatTex[i] != NULL);
+        assert(gpBoatTex[i] != NULL, ERROR_TEXTURE_MISSING);
         gpBoatRaster[i] = RwTextureGetRaster(gpBoatTex[i]);
     }
 
     for (int32_t i = 0; i < MAX_CARDEBRIS_FILES; i++)
     {
         gpCarDebrisTex[i] = RwTextureRead(CardebrisFiles[i], nullptr);
-        assert(gpCarDebrisTex[i] != NULL);
+        assert(gpCarDebrisTex[i] != NULL, ERROR_TEXTURE_MISSING);
         gpCarDebrisRaster[i] = RwTextureGetRaster(gpCarDebrisTex[i]);
     }
 
     for (int32_t i = 0; i < MAX_CARSPLASH_FILES; i++)
     {
         gpCarSplashTex[i] = RwTextureRead(CarsplashFiles[i], nullptr);
-        assert(gpCarSplashTex[i] != NULL);
+        assert(gpCarSplashTex[i] != NULL, ERROR_TEXTURE_MISSING);
         gpCarSplashRaster[i] = RwTextureGetRaster(gpCarSplashTex[i]);
     }
 
     gpBoatWakeTex = RwTextureRead("boatwake2", nullptr);
-    assert(gpBoatWakeTex != NULL);
+    assert(gpBoatWakeTex != NULL, ERROR_TEXTURE_MISSING);
     gpBoatWakeRaster = RwTextureGetRaster(gpBoatWakeTex);
 
     gpFlame1Tex = RwTextureRead("flame1", nullptr);
-    assert(gpFlame1Tex != NULL);
+    assert(gpFlame1Tex != NULL, ERROR_TEXTURE_MISSING);
     gpFlame1Raster = RwTextureGetRaster(gpFlame1Tex);
 
     gpFlame5Tex = RwTextureRead("flame5", nullptr);
-    assert(gpFlame5Tex != NULL);
+    assert(gpFlame5Tex != NULL, ERROR_TEXTURE_MISSING);
 
     for (int32_t i = 0; i < MAX_FLAME_FILES; i++)
     {
         gpFlameTex[i] = RwTextureRead(FlameFiles[i], NULL);
-
+        assert(gpFlameTex[i] != NULL, ERROR_TEXTURE_MISSING);
         if (gpFlameTex[i] != NULL)
             gpFlameRaster[i] = RwTextureGetRaster(gpFlameTex[i]);
     }
@@ -1467,104 +1474,104 @@ void CParticle::Initialise()
 #endif
 
     gpRainDropSmallTex = RwTextureRead("rainsmall", nullptr);
-    assert(gpRainDropSmallTex != NULL);
+    assert(gpRainDropSmallTex != NULL, ERROR_TEXTURE_MISSING);
     gpRainDropSmallRaster = RwTextureGetRaster(gpRainDropSmallTex);
 
     gpBloodTex = RwTextureRead("blood", nullptr);
-    assert(gpBloodTex != NULL);
+    assert(gpBloodTex != NULL, ERROR_TEXTURE_MISSING);
     gpBloodRaster = RwTextureGetRaster(gpBloodTex);
 
     gpLeafTex[0] = RwTextureRead("gameleaf01_64", nullptr);
-    assert(gpLeafTex[0] != NULL);
+    assert(gpLeafTex[0] != NULL, ERROR_TEXTURE_MISSING);
     gpLeafRaster[0] = RwTextureGetRaster(gpLeafTex[0]);
 
     gpLeafTex[1] = RwTextureRead("letter", nullptr);
-    assert(gpLeafTex[1] != NULL);
+    assert(gpLeafTex[1] != NULL, ERROR_TEXTURE_MISSING);
     gpLeafRaster[1] = RwTextureGetRaster(gpLeafTex[1]);
 
     gpCloudTex1 = RwTextureRead("cloud3", nullptr);
-    assert(gpCloudTex1 != NULL);
+    assert(gpCloudTex1 != NULL, ERROR_TEXTURE_MISSING);
     gpCloudRaster1 = RwTextureGetRaster(gpCloudTex1);
 
     gpCloudTex4 = RwTextureRead("cloudmasked", nullptr);
-    assert(gpCloudTex4 != NULL);
+    assert(gpCloudTex4 != NULL, ERROR_TEXTURE_MISSING);
     gpCloudRaster4 = RwTextureGetRaster(gpCloudTex4);
 
     gpBloodSmallTex = RwTextureRead("bloodsplat2", nullptr);
-    assert(gpBloodSmallTex != NULL);
+    assert(gpBloodSmallTex != NULL, ERROR_TEXTURE_MISSING);
     gpBloodSmallRaster = RwTextureGetRaster(gpBloodSmallTex);
 
     gpGungeTex = RwTextureRead("gunge", nullptr);
-    assert(gpGungeTex != NULL);
+    assert(gpGungeTex != NULL, ERROR_TEXTURE_MISSING);
     gpGungeRaster = RwTextureGetRaster(gpGungeTex);
 
     gpCollisionSmokeTex = RwTextureRead("collisionsmoke", nullptr);
-    assert(gpCollisionSmokeTex != NULL);
+    assert(gpCollisionSmokeTex != NULL, ERROR_TEXTURE_MISSING);
     gpCollisionSmokeRaster = RwTextureGetRaster(gpCollisionSmokeTex);
 
     gpBulletHitTex = RwTextureRead("bullethitsmoke", nullptr);
-    assert(gpBulletHitTex != NULL);
+    assert(gpBulletHitTex != NULL, ERROR_TEXTURE_MISSING);
     gpBulletHitRaster = RwTextureGetRaster(gpBulletHitTex);
 
     gpGunShellTex = RwTextureRead("gunshell", nullptr);
-    assert(gpGunShellTex != NULL);
+    assert(gpGunShellTex != NULL, ERROR_TEXTURE_MISSING);
     gpGunShellRaster = RwTextureGetRaster(gpGunShellTex);
 
     gpPointlightTex = RwTextureRead("pointlight", nullptr);
-    assert(gpPointlightTex != NULL);
+    assert(gpPointlightTex != NULL, ERROR_TEXTURE_MISSING);
     gpPointlightRaster = RwTextureGetRaster(gpPointlightTex);
 
     gpSparkTex = RwTextureRead("spark", nullptr);
-    assert(gpSparkTex != NULL);
+    assert(gpSparkTex != NULL, ERROR_TEXTURE_MISSING);
     gpSparkRaster = RwTextureGetRaster(gpSparkTex);
 
     gpNewspaperTex = RwTextureRead("newspaper02_64", nullptr);
-    assert(gpNewspaperTex != NULL);
+    assert(gpNewspaperTex != NULL, ERROR_TEXTURE_MISSING);
     gpNewspaperRaster = RwTextureGetRaster(gpNewspaperTex);
 
     gpGunSmokeTex = RwTextureRead("gunsmoke3", nullptr);
-    assert(gpGunSmokeTex != NULL);
+    assert(gpGunSmokeTex != NULL, ERROR_TEXTURE_MISSING);
     gpGunSmokeRaster = RwTextureGetRaster(gpGunSmokeTex);
 
     gpDotTex = RwTextureRead("dot", nullptr);
-    assert(gpDotTex != NULL);
+    assert(gpDotTex != NULL, ERROR_TEXTURE_MISSING);
     gpDotRaster = RwTextureGetRaster(gpDotTex);
 
     gpHeatHazeTex = RwTextureRead("heathaze", nullptr);
-    assert(gpHeatHazeTex != NULL);
+    assert(gpHeatHazeTex != NULL, ERROR_TEXTURE_MISSING);
     gpHeatHazeRaster = RwTextureGetRaster(gpHeatHazeTex);
 
     gpBeastieTex = RwTextureRead("beastie", nullptr);
-    assert(gpBeastieTex != NULL);
+    assert(gpBeastieTex != NULL, ERROR_TEXTURE_MISSING);
     gpBeastieRaster = RwTextureGetRaster(gpBeastieTex);
 
     gpRainDripTex[0] = RwTextureRead("raindrip64", nullptr);
-    assert(gpRainDripTex[0] != NULL);
+    assert(gpRainDripTex[0] != NULL, ERROR_TEXTURE_MISSING);
     gpRainDripRaster[0] = RwTextureGetRaster(gpRainDripTex[0]);
 
     gpRainDripTex[1] = RwTextureRead("raindripb64", nullptr);
-    assert(gpRainDripTex[1] != NULL);
+    assert(gpRainDripTex[1] != NULL, ERROR_TEXTURE_MISSING);
     gpRainDripRaster[1] = RwTextureGetRaster(gpRainDripTex[1]);
 
     gpRainDripDarkTex[0] = RwTextureRead("raindrip64_d", nullptr);
-    assert(gpRainDripDarkTex[0] != NULL);
+    assert(gpRainDripDarkTex[0] != NULL, ERROR_TEXTURE_MISSING);
     gpRainDripDarkRaster[0] = RwTextureGetRaster(gpRainDripDarkTex[0]);
 
     gpRainDripDarkTex[1] = RwTextureRead("raindripb64_d", nullptr);
-    assert(gpRainDripDarkTex[1] != NULL);
+    assert(gpRainDripDarkTex[1] != NULL, ERROR_TEXTURE_MISSING);
     gpRainDripDarkRaster[1] = RwTextureGetRaster(gpRainDripDarkTex[1]);
 
     gpWakeOldTex = RwTextureRead("wake_old", nullptr);
-    assert(gpWakeOldTex != NULL);
+    assert(gpWakeOldTex != NULL, ERROR_TEXTURE_MISSING);
     gpWakeOldRaster = RwTextureGetRaster(gpWakeOldTex);
 
     gpMultiPlayerHitTex = RwTextureRead("mphit", nullptr);
-    assert(gpMultiPlayerHitTex != NULL);
+    assert(gpMultiPlayerHitTex != NULL, ERROR_TEXTURE_MISSING);
     gpMultiPlayerHitRaster = RwTextureGetRaster(gpMultiPlayerHitTex);
 
     // CExplosionVC - for the shock wave
     coronaringa = RwTextureRead("coronaringa", nullptr);
-    assert(coronaringa != NULL);
+    assert(coronaringa != NULL, ERROR_TEXTURE_MISSING);
 
     for (int32_t i = 0; i < MAX_PARTICLES; i++)
     {
@@ -1809,117 +1816,117 @@ void CParticle::ReloadTXD() {
     for (int32_t i = 0; i < MAX_SMOKE_FILES; i++)
     {
         gpSmokeTex[i] = RwTextureRead(SmokeFiles[i], nullptr);
-        assert(gpSmokeTex[i] != NULL);
+        assert(gpSmokeTex[i] != NULL, ERROR_TEXTURE_MISSING);
         gpSmokeRaster[i] = RwTextureGetRaster(gpSmokeTex[i]);
     }
 
     gpSmoke2Tex = RwTextureRead("smokeII_3", nullptr);
-    assert(gpSmoke2Tex != NULL);
+    assert(gpSmoke2Tex != NULL, ERROR_TEXTURE_MISSING);
     gpSmoke2Raster = RwTextureGetRaster(gpSmoke2Tex);
 
     for (int32_t i = 0; i < MAX_RUBBER_FILES; i++)
     {
         gpRubberTex[i] = RwTextureRead(RubberFiles[i], nullptr);
-        assert(gpRubberTex[i] != NULL);
+        assert(gpRubberTex[i] != NULL, ERROR_TEXTURE_MISSING);
         gpRubberRaster[i] = RwTextureGetRaster(gpRubberTex[i]);
     }
 
     for (int32_t i = 0; i < MAX_RAINSPLASH_FILES; i++)
     {
         gpRainSplashTex[i] = RwTextureRead(RainSplashFiles[i], nullptr);
-        assert(gpRainSplashTex[i] != NULL);
+        assert(gpRainSplashTex[i] != NULL, ERROR_TEXTURE_MISSING);
         gpRainSplashRaster[i] = RwTextureGetRaster(gpRainSplashTex[i]);
     }
 
     for (int32_t i = 0; i < MAX_WATERSPRAY_FILES; i++)
     {
         gpWatersprayTex[i] = RwTextureRead(WatersprayFiles[i], nullptr);
-        assert(gpWatersprayTex[i] != NULL);
+        assert(gpWatersprayTex[i] != NULL, ERROR_TEXTURE_MISSING);
         gpWatersprayRaster[i] = RwTextureGetRaster(gpWatersprayTex[i]);
     }
 
     for (int32_t i = 0; i < MAX_EXPLOSIONMEDIUM_FILES; i++)
     {
         gpExplosionMediumTex[i] = RwTextureRead(ExplosionMediumFiles[i], nullptr);
-        assert(gpExplosionMediumTex[i] != NULL);
+        assert(gpExplosionMediumTex[i] != NULL, ERROR_TEXTURE_MISSING);
         gpExplosionMediumRaster[i] = RwTextureGetRaster(gpExplosionMediumTex[i]);
     }
 
     for (int32_t i = 0; i < MAX_EXPLOSIONMASSIVE_FILES; i++)
     {
         gpExplosionMassiveTex[i] = RwTextureRead(ExplosionMassiveFiles[i], nullptr);
-        assert(gpExplosionMassiveTex[i] != NULL);
+        assert(gpExplosionMassiveTex[i] != NULL, ERROR_TEXTURE_MISSING);
         gpExplosionMassiveRaster[i] = RwTextureGetRaster(gpExplosionMassiveTex[i]);
     }
 
     for (int32_t i = 0; i < MAX_EXPLOSIONPARTICLEEX_FILES; i++)
     {
         gpExplosionParticleEXTex[i] = RwTextureRead(ExplosionParticleEXFiles[i], nullptr);
-        assert(gpExplosionParticleEXTex[i] != NULL);
+        assert(gpExplosionParticleEXTex[i] != NULL, ERROR_TEXTURE_MISSING);
         gpExplosionParticleEXRaster[i] = RwTextureGetRaster(gpExplosionParticleEXTex[i]);
     }
 
     for (int32_t i = 0; i < MAX_GUNFLASH_FILES; i++)
     {
         gpGunFlashTex[i] = RwTextureRead(GunFlashFiles[i], nullptr);
-        assert(gpGunFlashTex[i] != NULL);
+        assert(gpGunFlashTex[i] != NULL, ERROR_TEXTURE_MISSING);
         gpGunFlashRaster[i] = RwTextureGetRaster(gpGunFlashTex[i]);
     }
 
     gpRainDropTex = RwTextureRead("raindrop4", nullptr);
-    assert(gpRainDropTex != NULL);
+    assert(gpRainDropTex != NULL, ERROR_TEXTURE_MISSING);
     gpRainDropRaster = RwTextureGetRaster(gpRainDropTex);
 
     // Snow
     gpSnowTex = RwTextureRead("snowflake", nullptr);
-    assert(gpSnowTex != NULL);
+    assert(gpSnowTex != NULL, ERROR_TEXTURE_MISSING);
     gpSnowRaster = RwTextureGetRaster(gpSnowTex);
 
     for (int32_t i = 0; i < MAX_RAINSPLASHUP_FILES; i++)
     {
         gpRainSplashupTex[i] = RwTextureRead(RainSplashupFiles[i], nullptr);
-        assert(gpRainSplashupTex[i] != NULL);
+        assert(gpRainSplashupTex[i] != NULL, ERROR_TEXTURE_MISSING);
         gpRainSplashupRaster[i] = RwTextureGetRaster(gpRainSplashupTex[i]);
     }
 
     for (int32_t i = 0; i < MAX_BIRDFRONT_FILES; i++)
     {
         gpBirdfrontTex[i] = RwTextureRead(BirdfrontFiles[i], nullptr);
-        assert(gpBirdfrontTex[i] != NULL);
+        assert(gpBirdfrontTex[i] != NULL, ERROR_TEXTURE_MISSING);
         gpBirdfrontRaster[i] = RwTextureGetRaster(gpBirdfrontTex[i]);
     }
 
     for (int32_t i = 0; i < MAX_BOAT_FILES; i++)
     {
         gpBoatTex[i] = RwTextureRead(BoatFiles[i], nullptr);
-        assert(gpBoatTex[i] != NULL);
+        assert(gpBoatTex[i] != NULL, ERROR_TEXTURE_MISSING);
         gpBoatRaster[i] = RwTextureGetRaster(gpBoatTex[i]);
     }
 
     for (int32_t i = 0; i < MAX_CARDEBRIS_FILES; i++)
     {
         gpCarDebrisTex[i] = RwTextureRead(CardebrisFiles[i], nullptr);
-        assert(gpCarDebrisTex[i] != NULL);
+        assert(gpCarDebrisTex[i] != NULL, ERROR_TEXTURE_MISSING);
         gpCarDebrisRaster[i] = RwTextureGetRaster(gpCarDebrisTex[i]);
     }
 
     for (int32_t i = 0; i < MAX_CARSPLASH_FILES; i++)
     {
         gpCarSplashTex[i] = RwTextureRead(CarsplashFiles[i], nullptr);
-        assert(gpCarSplashTex[i] != NULL);
+        assert(gpCarSplashTex[i] != NULL, ERROR_TEXTURE_MISSING);
         gpCarSplashRaster[i] = RwTextureGetRaster(gpCarSplashTex[i]);
     }
 
     gpBoatWakeTex = RwTextureRead("boatwake2", nullptr);
-    assert(gpBoatWakeTex != NULL);
+    assert(gpBoatWakeTex != NULL, ERROR_TEXTURE_MISSING);
     gpBoatWakeRaster = RwTextureGetRaster(gpBoatWakeTex);
 
     gpFlame1Tex = RwTextureRead("flame1", nullptr);
-    assert(gpFlame1Tex != NULL);
+    assert(gpFlame1Tex != NULL, ERROR_TEXTURE_MISSING);
     gpFlame1Raster = RwTextureGetRaster(gpFlame1Tex);
 
     gpFlame5Tex = RwTextureRead("flame5", nullptr);
-    assert(gpFlame5Tex != NULL);
+    assert(gpFlame5Tex != NULL, ERROR_TEXTURE_MISSING);
 
     //#ifdef FIX_BUGS
 #if 0
@@ -1930,104 +1937,104 @@ void CParticle::ReloadTXD() {
 #endif
 
     gpRainDropSmallTex = RwTextureRead("rainsmall", nullptr);
-    assert(gpRainDropSmallTex != NULL);
+    assert(gpRainDropSmallTex != NULL, ERROR_TEXTURE_MISSING);
     gpRainDropSmallRaster = RwTextureGetRaster(gpRainDropSmallTex);
 
     gpBloodTex = RwTextureRead("blood", nullptr);
-    assert(gpBloodTex != NULL);
+    assert(gpBloodTex != NULL, ERROR_TEXTURE_MISSING);
     gpBloodRaster = RwTextureGetRaster(gpBloodTex);
 
     gpLeafTex[0] = RwTextureRead("gameleaf01_64", nullptr);
-    assert(gpLeafTex[0] != NULL);
+    assert(gpLeafTex[0] != NULL, ERROR_TEXTURE_MISSING);
     gpLeafRaster[0] = RwTextureGetRaster(gpLeafTex[0]);
 
     gpLeafTex[1] = RwTextureRead("letter", nullptr);
-    assert(gpLeafTex[1] != NULL);
+    assert(gpLeafTex[1] != NULL, ERROR_TEXTURE_MISSING);
     gpLeafRaster[1] = RwTextureGetRaster(gpLeafTex[1]);
 
     gpCloudTex1 = RwTextureRead("cloud3", nullptr);
-    assert(gpCloudTex1 != NULL);
+    assert(gpCloudTex1 != NULL, ERROR_TEXTURE_MISSING);
     gpCloudRaster1 = RwTextureGetRaster(gpCloudTex1);
 
     gpCloudTex4 = RwTextureRead("cloudmasked", nullptr);
-    assert(gpCloudTex4 != NULL);
+    assert(gpCloudTex4 != NULL, ERROR_TEXTURE_MISSING);
     gpCloudRaster4 = RwTextureGetRaster(gpCloudTex4);
 
     gpBloodSmallTex = RwTextureRead("bloodsplat2", nullptr);
-    assert(gpBloodSmallTex != NULL);
+    assert(gpBloodSmallTex != NULL, ERROR_TEXTURE_MISSING);
     gpBloodSmallRaster = RwTextureGetRaster(gpBloodSmallTex);
 
     gpGungeTex = RwTextureRead("gunge", nullptr);
-    assert(gpGungeTex != NULL);
+    assert(gpGungeTex != NULL, ERROR_TEXTURE_MISSING);
     gpGungeRaster = RwTextureGetRaster(gpGungeTex);
 
     gpCollisionSmokeTex = RwTextureRead("collisionsmoke", nullptr);
-    assert(gpCollisionSmokeTex != NULL);
+    assert(gpCollisionSmokeTex != NULL, ERROR_TEXTURE_MISSING);
     gpCollisionSmokeRaster = RwTextureGetRaster(gpCollisionSmokeTex);
 
     gpBulletHitTex = RwTextureRead("bullethitsmoke", nullptr);
-    assert(gpBulletHitTex != NULL);
+    assert(gpBulletHitTex != NULL, ERROR_TEXTURE_MISSING);
     gpBulletHitRaster = RwTextureGetRaster(gpBulletHitTex);
 
     gpGunShellTex = RwTextureRead("gunshell", nullptr);
-    assert(gpGunShellTex != NULL);
+    assert(gpGunShellTex != NULL, ERROR_TEXTURE_MISSING);
     gpGunShellRaster = RwTextureGetRaster(gpGunShellTex);
 
     gpPointlightTex = RwTextureRead("pointlight", nullptr);
-    assert(gpPointlightTex != NULL);
+    assert(gpPointlightTex != NULL, ERROR_TEXTURE_MISSING);
     gpPointlightRaster = RwTextureGetRaster(gpPointlightTex);
 
     gpSparkTex = RwTextureRead("spark", nullptr);
-    assert(gpSparkTex != NULL);
+    assert(gpSparkTex != NULL, ERROR_TEXTURE_MISSING);
     gpSparkRaster = RwTextureGetRaster(gpSparkTex);
 
     gpNewspaperTex = RwTextureRead("newspaper02_64", nullptr);
-    assert(gpNewspaperTex != NULL);
+    assert(gpNewspaperTex != NULL, ERROR_TEXTURE_MISSING);
     gpNewspaperRaster = RwTextureGetRaster(gpNewspaperTex);
 
     gpGunSmokeTex = RwTextureRead("gunsmoke3", nullptr);
-    assert(gpGunSmokeTex != NULL);
+    assert(gpGunSmokeTex != NULL, ERROR_TEXTURE_MISSING);
     gpGunSmokeRaster = RwTextureGetRaster(gpGunSmokeTex);
 
     gpDotTex = RwTextureRead("dot", nullptr);
-    assert(gpDotTex != NULL);
+    assert(gpDotTex != NULL, ERROR_TEXTURE_MISSING);
     gpDotRaster = RwTextureGetRaster(gpDotTex);
 
     gpHeatHazeTex = RwTextureRead("heathaze", nullptr);
-    assert(gpHeatHazeTex != NULL);
+    assert(gpHeatHazeTex != NULL, ERROR_TEXTURE_MISSING);
     gpHeatHazeRaster = RwTextureGetRaster(gpHeatHazeTex);
 
     gpBeastieTex = RwTextureRead("beastie", nullptr);
-    assert(gpBeastieTex != NULL);
+    assert(gpBeastieTex != NULL, ERROR_TEXTURE_MISSING);
     gpBeastieRaster = RwTextureGetRaster(gpBeastieTex);
 
     gpRainDripTex[0] = RwTextureRead("raindrip64", nullptr);
-    assert(gpRainDripTex[0] != NULL);
+    assert(gpRainDripTex[0] != NULL, ERROR_TEXTURE_MISSING);
     gpRainDripRaster[0] = RwTextureGetRaster(gpRainDripTex[0]);
 
     gpRainDripTex[1] = RwTextureRead("raindripb64", nullptr);
-    assert(gpRainDripTex[1] != NULL);
+    assert(gpRainDripTex[1] != NULL, ERROR_TEXTURE_MISSING);
     gpRainDripRaster[1] = RwTextureGetRaster(gpRainDripTex[1]);
 
     gpRainDripDarkTex[0] = RwTextureRead("raindrip64_d", nullptr);
-    assert(gpRainDripDarkTex[0] != NULL);
+    assert(gpRainDripDarkTex[0] != NULL, ERROR_TEXTURE_MISSING);
     gpRainDripDarkRaster[0] = RwTextureGetRaster(gpRainDripDarkTex[0]);
 
     gpRainDripDarkTex[1] = RwTextureRead("raindripb64_d", nullptr);
-    assert(gpRainDripDarkTex[1] != NULL);
+    assert(gpRainDripDarkTex[1] != NULL, ERROR_TEXTURE_MISSING);
     gpRainDripDarkRaster[1] = RwTextureGetRaster(gpRainDripDarkTex[1]);
 
     gpWakeOldTex = RwTextureRead("wake_old", nullptr);
-    assert(gpWakeOldTex != NULL);
+    assert(gpWakeOldTex != NULL, ERROR_TEXTURE_MISSING);
     gpWakeOldRaster = RwTextureGetRaster(gpWakeOldTex);
 
     gpMultiPlayerHitTex = RwTextureRead("mphit", nullptr);
-    assert(gpMultiPlayerHitTex != NULL);
+    assert(gpMultiPlayerHitTex != NULL, ERROR_TEXTURE_MISSING);
     gpMultiPlayerHitRaster = RwTextureGetRaster(gpMultiPlayerHitTex);
 
     // CExplosionVC - for the shock wave
     coronaringa = RwTextureRead("coronaringa", nullptr);
-    assert(coronaringa != NULL);
+    assert(coronaringa != NULL, ERROR_TEXTURE_MISSING);
 
     for (int32_t i = 0; i < MAX_PARTICLES; i++)
     {
@@ -5372,7 +5379,7 @@ CWeaponInfo*
 GetInfo(CPed* ped)
 {
     CWeaponInfo* info = CWeaponInfo::GetWeaponInfo(ped->m_aWeapons[ped->m_nActiveWeaponSlot].m_eWeaponType, ped->GetWeaponSkill());
-    assert(info != NULL);
+    assert(info != NULL, ERROR_NULL_POINTER);
     return info;
 }
 
@@ -5416,7 +5423,7 @@ FireAreaEffect(CPed* shooter, CVector* fireSource)
 
 void CWeap::AddGunshell(CPed* creator, CVector& position, const CVector2D& direction, float size)
 {
-    ASSERT(creator != NULL);
+    ASSERT(creator != NULL, ERROR_NULL_POINTER);
 
     if (creator == NULL)
         return;
@@ -6971,9 +6978,9 @@ static void __fastcall MyTriggerGunflash(Fx_c* fx, int, CEntity* entity, CVector
         auto Task = ped->m_pIntelligence->GetTaskUseGun();
         if (Task) {
         bool LeftHand = Task->bLefttHand;
-        if (doGunflash) {
+     //   if (doGunflash) {
             DoGunFlash(ped, &origin, LeftHand);
-        }
+      //  }
        }
     }
 }
@@ -7525,32 +7532,67 @@ static void __fastcall MyImpactFx(Fx_c* fx, int, CVector& posn, CVector& directi
     fx->AddBulletImpact(posn, direction, bulletFxType, amount, arg4);
 }
 #include "postfx.h"
+
+
+/*static void __fastcall SetNewPlayerWeaponMode(CCamera* _this, int, __int16 a2, __int16 a3, __int16 a4) {
+    _this->SetMotionBlur(CTimeCycle::GetAmbientRed(), CTimeCycle::GetAmbientGreen(), CTimeCycle::GetAmbientBlue(), _this->m_nMotionBlur, MOTION_BLUR_LIGHT_SCENE);
+    _this->SetNewPlayerWeaponMode(a2, a3, a4);
+}
+
+static void __fastcall ClearPlayerWeaponMode(CCamera* _this, int) {
+    _this->SetMotionBlur(CTimeCycle::GetAmbientRed(), CTimeCycle::GetAmbientGreen(), CTimeCycle::GetAmbientBlue(), _this->m_nMotionBlur, MOTION_BLUR_LIGHT_SCENE);
+    _this->ClearPlayerWeaponMode();
+}*/
+
+int32_t TotalInjectedPatches = 0;
 class CParticleVC {
 public:
     CParticleVC() {
-        Events::initRwEvent += []() {
-           CDebug::DebugInitTextBuffer();
+        Events::initRwEvent.after += []() {
+            CDebug::DebugInitTextBuffer();
+            CParticle::Initialise();
 #ifdef GTA_SCENE_EDIT
             CSceneEdit::Initialise();
 #endif
-       //     CMBlur::MotionBlurOpen(TheCamera.m_pRwCamera);
-           CPostFX::Open(TheCamera.m_pRwCamera);
-          patch::RedirectJump(0x50B8F0, CMBlur::RenderMotionBlur);
-         //  if (Trails) {
-          //     CPostFX::BlurOn = true;
-         //  }
-         //  SetMotionBlur(CTimeCycle::GetAmbientRed(), CTimeCycle::GetAmbientGreen(), CTimeCycle::GetAmbientBlue(), 5, MOTION_BLUR_LIGHT_SCENE);
-         //   CPostFX::Open(TheCamera.m_pRwCamera);
-            };
-
-        Events::initRwEvent += []() {
-            CParticle::Initialise();
-            TheCamera.SetMotionBlur(230, 230, 230, 215, MOTION_BLUR_LIGHT_SCENE);
-       //     SetMotionBlur(255, 255, 255, 0, 0);
+            //     CMBlur::MotionBlurOpen(TheCamera.m_pRwCamera);
             log("Injecting patches...");
+            if (Trails) {
+                log("Trails...");
+                CPostFX::Open(TheCamera.m_pRwCamera);
+                patch::RedirectJump(0x50B8F0, CMBlur::RenderMotionBlur);
+                /*patch::RedirectCall(0x5E7DA3, SetNewPlayerWeaponMode);
+                patch::RedirectCall(0x5E7DCD, SetNewPlayerWeaponMode);
+                patch::RedirectCall(0x5E7E00, SetNewPlayerWeaponMode);
+                patch::RedirectCall(0x609862, SetNewPlayerWeaponMode);
+                patch::RedirectCall(0x609875, SetNewPlayerWeaponMode);
+                patch::RedirectCall(0x609888, SetNewPlayerWeaponMode);
+                patch::RedirectCall(0x60989B, SetNewPlayerWeaponMode);
+                patch::RedirectCall(0x6098AE, SetNewPlayerWeaponMode);
+                patch::RedirectCall(0x621ACA, SetNewPlayerWeaponMode);
+                patch::RedirectCall(0x685B97, SetNewPlayerWeaponMode);
+                patch::RedirectCall(0x686D6E, SetNewPlayerWeaponMode);
+                patch::RedirectCall(0x529C43, ClearPlayerWeaponMode);
+                patch::RedirectCall(0x5BC60A, ClearPlayerWeaponMode);
+                patch::RedirectCall(0x6098BB, ClearPlayerWeaponMode);
+                patch::RedirectCall(0x609CB4, ClearPlayerWeaponMode);
+                patch::RedirectCall(0x60A02E, ClearPlayerWeaponMode);
+                patch::RedirectCall(0x60B48B, ClearPlayerWeaponMode);
+                patch::RedirectCall(0x60B542, ClearPlayerWeaponMode);
+                patch::RedirectCall(0x634CAE, ClearPlayerWeaponMode);
+                patch::RedirectCall(0x68596F, ClearPlayerWeaponMode);
+                patch::RedirectCall(0x685A25, ClearPlayerWeaponMode);*/
+                TotalInjectedPatches++;
+            }
+            //  if (Trails) {
+             //     CPostFX::BlurOn = true;
+            //  }
+            //  SetMotionBlur(CTimeCycle::GetAmbientRed(), CTimeCycle::GetAmbientGreen(), CTimeCycle::GetAmbientBlue(), 5, MOTION_BLUR_LIGHT_SCENE);
+            //   CPostFX::Open(TheCamera.m_pRwCamera);
+       //     SetMotionBlur(255, 255, 255, 0, 0);
           //  patch::RedirectCall(0x7424CB, MyFireSniper);
          //   Memory::InjectHook(0x4AAC90, &FxSys::DoFxAudio, PATCH_JUMP);
             if (BulletImpactParticles) {
+                log("BulletImpactParticles...");
                 patch::RedirectCall(0x73CD92, MyDoBulletImpact);
                 patch::RedirectCall(0x741199, MyDoBulletImpact);
                 patch::RedirectCall(0x7411DF, MyDoBulletImpact);
@@ -7560,11 +7602,15 @@ public:
                 patch::RedirectCall(0x49F4C1, FxInfo);
                 patch::RedirectCall(0x49F0DD, FxInfo);
                 patch::RedirectCall(0x49F59A, FxInfo);
+                TotalInjectedPatches += 9;
             }
             if (MissileSmoke) {
+                log("MissileSmoke...");
                 patch::RedirectCall(0x738C9D, FxInfo);
+                TotalInjectedPatches++;
             }
             if (WheelParticles) {
+                log("WheelParticles...");
                 patch::RedirectCall(0x4A026B, FxInfo);
                 patch::RedirectCall(0x4A04BB, FxInfo);
                 patch::RedirectCall(0x4A0ABD, FxInfo);
@@ -7573,47 +7619,67 @@ public:
                 patch::RedirectCall(0x6DF1E5, FxInfo);
                 patch::RedirectCall(0x6DEF77, FxInfo);
                 patch::RedirectCall(0x6DED41, FxInfo);
+                TotalInjectedPatches += 8;
             }
             if (PunchImpactParticles) {
+                log("PunchImpactParticles...");
                 patch::RedirectCall(0x49F6E3, FxInfo);
+                TotalInjectedPatches++;
             }
             if (BloodnGore && (BloodnGore && BulletImpactParticles)) {
+                log("BloodnGore...");
                 patch::RedirectCall(0x49EB86, FxInfo);
+                TotalInjectedPatches++;
             }
             if (WoodImpactParticles) {
+                log("WoodImpactParticles...");
                 patch::RedirectCall(0x49EE84, FxInfo);
+                TotalInjectedPatches++;
             }
             if (PlaneSmokeParticles) {
+                log("PlaneSmokeParticles...");
                 patch::RedirectCall(0x6C93FB, FxInfo);
                 patch::RedirectCall(0x6CBF1B, FxInfo);
                 patch::RedirectCall(0x6CA97D, FxInfo);
                 patch::RedirectCall(0x6CAA09, FxInfo);
+                TotalInjectedPatches += 4;
             }
             // Fire extinguish particles
             if (FiråExtinguishParticles) {
+                log("FireExtinguishParticles...");
                 patch::RedirectCall(0x539612, FxInfo);
+                TotalInjectedPatches++;
             }
             // Water cannon
             if (WaterCannînParticles) {
+                log("WaterCannonParticles...");
                 patch::RedirectCall(0x729354, FxInfo);
                 patch::RedirectCall(0x729A5A, FxInfo);
+                TotalInjectedPatches += 2;
             }
             // Some water particles
             if (WaterParticles) {
+                log("WaterParticles...");
                 cBuoyancy::InjectHooks();
                 patch::RedirectCall(0x6C3630, FxInfo);
                 patch::RedirectCall(0x6C39BF, FxInfo);
                 patch::RedirectCall(0x5E7543, FxInfo);
-                //patch::RedirectCall(0x5E7415, FxInfo);
+                //patch::RedirectCall(0x5E7415, FxInfo); // This causes random glitches around the map for some reason...
                 patch::RedirectCall(0x68AD9F, FxInfo);
+                TotalInjectedPatches += 5;
             }
             if (FootDustParticles) {
+                log("FootDustParticles...");
                 patch::RedirectCall(0x5E3835, FxInfo);
+                TotalInjectedPatches++;
             }
             if (FootSplashesParticles) {
+                log("FootSplashParticles...");
                 patch::RedirectCall(0x5E36A5, FxInfo);
+                TotalInjectedPatches++;
             }
             if (MuzzleFlashnSmoke) {
+                log("MuzzleFlashnSmoke...");
                 Memory::InjectHook(0x48ED94, &MyTriggerGunflash, PATCH_CALL);
                 Memory::InjectHook(0x740DA7, &MyTriggerGunflash, PATCH_CALL);
                 patch::RedirectCall(0x628328, MyWeaponFire);
@@ -7627,6 +7693,7 @@ public:
                 //patch::RedirectJump(0x4A0DE0, MyTriggerGunflash);
                 patch::Nop(0x61ECE6, 0x61ECFA - 0x61ECE6); // CPed::DoGunFlash [CTaskSimpleUseGun::FireGun]
                 //   injector::MakeNOP(0x4A0F38, 5, true);
+                TotalInjectedPatches += 4;
             }
             // Memory::InjectHook(0x716C90, &Clouds::MovingFogRender, PATCH_JUMP);
           //   Memory::InjectHook(0x6DD130, &Veh::DoBoatSplashes, PATCH_JUMP);
@@ -7650,7 +7717,9 @@ public:
             if (DamagedEngineSmoke) {
            //     memset((void*)0x6AB34B, 0x90, 5); // Damaged engine smoke (Car)
             //    memset((void*)0x6BD40A, 0x90, 5); // Damaged engine smoke (Bike)
+                log("DamagedEngineSmoke...");
                 Memory::InjectHook(0x6D2A80, &Auto::AddDamagedVehicleParticles, PATCH_JUMP);
+                TotalInjectedPatches++;
             }
             // if (FireWhenAboutToExplode) {
                  //Memory::InjectHook(0x6A7090, &Auto::ProcessCarOnFireAndExplode, PATCH_JUMP);
@@ -7674,24 +7743,34 @@ public:
             //  memset((void*)0x4A0F38, 0x90, 5);
              // Replace gunshells
             if (Gunshells) {
+                log("Gunshells...");
                 Memory::InjectHook(0x73A3E0, &CWeap::AddGunshell, PATCH_JUMP);
+                TotalInjectedPatches++;
             }
             // Replace sandstorm particles
             if (SandStorm) {
+                log("Sandstorm particles...");
                 Memory::InjectHook(0x72A820, &AddSandStormParticles, PATCH_JUMP);
+                TotalInjectedPatches++;
             }
             // Replace rain
             if (GTAIIIVCRainEnable) {
+                log("GTA III/VC Rain...");
                 Memory::InjectHook(0x72A9A0, &AddRain, PATCH_JUMP);
                 Memory::InjectHook(0x72AF70, &RenderRainStreaks, PATCH_JUMP);
+                TotalInjectedPatches += 2;
             }
-            // Replace damage particles
+            // Replace vehicle damage particles
             if (dmgParticles) {
+                log("Vehicle damage particles...");
                 Memory::InjectHook(0x6A6DC0, &Auto::dmgDrawCarCollidingParticles, PATCH_JUMP);
+                TotalInjectedPatches++;
             }
             // Replace exhaust smoke
             if (ExhaustSmoke) {
+                log("Exhaust smoke...");
                 Memory::InjectHook(0x6DE240, &Veh::AddExhaustParticles, PATCH_JUMP);
+                TotalInjectedPatches++;
             }
             // Replace friction sparks (I know it's bad to replace the whole function, just for one minor thing, sorry) NO LONGER NEEDED SINCE SPARKS ARE CREATED EVERYWHERE THEY CALLED
            // if (FrictionParticles) {
@@ -7701,15 +7780,21 @@ public:
             // Memory::InjectHook(0x6D2D50, &Auto::AddWheelDirtAndWater, PATCH_JUMP);
             // Replace rain splash particles
             if (RainOnRoofParticles) {
+                log("RainOnVehicleRoof...");
                 Memory::InjectHook(0x6DDF60, &Veh::AddWaterSplashParticles, PATCH_JUMP);
+                TotalInjectedPatches++;
             }
             // Weapon effects such as: Flamethrower flame, extinguisher smoke, spray can
             if (WeaponEffects) {
+                log("Weapon particles...");
                 Memory::InjectHook(0x73E690, &CWeap::DoWeaponEffect, PATCH_JUMP);
+                TotalInjectedPatches++;
             }
             // Heli dust effect
             if (HeliDust) {
+                log("Heli dust...");
                 Memory::InjectHook(0x6B0690, &Heli::DoHeliDustEffect, PATCH_JUMP);
+                TotalInjectedPatches++;
             }
             // Teargas smoke
             // Memory::InjectHook(0x738B20, &ProjectileInfo::Update, PATCH_JUMP);
@@ -7717,11 +7802,15 @@ public:
             //Memory::Patch(0x5DF3E6, 0);
             // Harvester particles, when you run people over
             if (HarvesterParticles && (HarvesterParticles && BloodnGore)) {
+                log("Harvester particles...");
                 Memory::InjectHook(0x6A9680, &Auto::ProcessHarvester, PATCH_JUMP);
+                TotalInjectedPatches++;
             }
             // Object burn effect
             if (ObjectBurnParticles) {
+                log("Object burn...");
                 Memory::InjectHook(0x59FB50, &Obj::DoBurnEffect, PATCH_JUMP);
+                TotalInjectedPatches++;
             }
             //CWaterCannon::InjectHooks();
             //Memory::InjectHook(0x49EB00, &AddBlood, PATCH_CALL);
@@ -7746,24 +7835,28 @@ public:
                 IMFX = false;
             }
             if (!IMFX && MuzzleFlashnSmoke) {
+                log("MuzzleFlashnSmoke...");
                 patch::Nop(0x73306D, 9); // Remove default gunflashes
                 patch::Nop(0x7330FF, 9); // Remove default gunflashes
                 //    patch::Nop(0x740DA7, 5); // Remove default gunflashes
                 patch::SetUShort(0x5DF425, 0xE990); // Remove default gunflashes
+                TotalInjectedPatches += 3;
             }
             /*if (NitroParticles) {
                 Memory::InjectHook(0x6A3BD0, &Auto::DoNitroEffect, PATCH_JUMP);
                 Memory::InjectHook(0x6A3E60, &Auto::StopNitroEffect, PATCH_JUMP);
             }*/
             if (ShatteredGlassParticles) {
+                log("ShatteredGlassParticles...");
                // CFallingGlassPane::InjectHooks();
                 patch::RedirectCall(0x49F9C7, FxInfo);
                 patch::RedirectCall(0x71ABEB, MyAddGlass);
                 patch::RedirectCall(0x71AC24, MyAddGlass);
                 patch::RedirectCall(0x71AC5D, MyAddGlass);
                 patch::RedirectCall(0x71AC96, MyAddGlass);
+                TotalInjectedPatches += 5;
             }
-            log("Finished injecting patches!");
+            log("Finished injecting patches! Total patches injected: %d out of 60.", TotalInjectedPatches);
             //  plugin::patch::RedirectCall(0x6A71C8, HK_CreateFxSystem);
          //     wuzipatch1();
             };
@@ -7813,9 +7906,8 @@ public:
            //     SetMotionBlur(0, 0, 0, 0, MOTION_BLUR_NONE);
 
             static bool isSniperModeActive = false;
-
-            if (SniperRifleGreenBlur) {
-                if (TheCamera.m_PlayerWeaponMode.m_nMode == MODE_SNIPER) {
+            auto weapType = FindPlayerPed()->m_aWeapons[FindPlayerPed()->m_nActiveWeaponSlot].m_eWeaponType;
+                if (SniperRifleGreenBlur[weapType] && TheCamera.m_PlayerWeaponMode.m_nMode == MODE_SNIPER) {
                     if (!isSniperModeActive) {
                     TheCamera.SetMotionBlur(180, 255, 180, 120, MOTION_BLUR_SNIPER);
                     isSniperModeActive = true;
@@ -7827,13 +7919,15 @@ public:
                         isSniperModeActive = false;
                     }
                 }
-            }
-            if (FindPlayerPed()->m_pPlayerData->m_nDrunkenness > 0) {
-                CMBlur::SetDrunkBlur(FindPlayerPed()->m_pPlayerData->m_nDrunkenness);
-            }
 
-            if (FindPlayerPed()->m_pPlayerData->m_nDrunkenness == 0) {
-                CMBlur::ClearDrunkBlur();
+            if (Trails) {
+                if (FindPlayerPed()->m_pPlayerData->m_nDrunkenness > 0) {
+                    CMBlur::SetDrunkBlur(FindPlayerPed()->m_pPlayerData->m_nDrunkenness);
+                }
+
+                if (FindPlayerPed()->m_pPlayerData->m_nDrunkenness == 0) {
+                    CMBlur::ClearDrunkBlur();
+                }
             }
 
             if (ParticleObjectsReview) {

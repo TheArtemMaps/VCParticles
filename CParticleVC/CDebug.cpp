@@ -6,7 +6,7 @@
 
 // Default assert causes the game to crash, dunno why, credits to re3 project
 #ifndef MASTER
-void re3_assert(const char* expr, const char* filename, unsigned int lineno, const char* func)
+void re3_assert(const char* expr, const char* filename, unsigned int lineno, const char* func, int ErrorCode)
 {
 #ifdef _WIN32
 	int nCode;
@@ -30,24 +30,46 @@ void re3_assert(const char* expr, const char* filename, unsigned int lineno, con
 	strcat_s(re3_buff, re3_buffsize, expr);
 	strcat_s(re3_buff, re3_buffsize, "\n");
 
+	switch (ErrorCode) {
+	case ERROR_NULL_POINTER:
+		strcat_s(re3_buff, re3_buffsize, "Error: Null pointer encountered (Something doesn't exist in-game).");
+		break;
+	case ERROR_LINE_TOO_LONG:
+		strcat_s(re3_buff, re3_buffsize, "Error: Line length exceeds 500 characters, or the .cfg file doesn't exist.");
+		break;
+	case ERROR_VALUE_NULL:
+		strcat_s(re3_buff, re3_buffsize, "Error: Expected value is null.");
+		break;
+	case ERROR_EXTRA_PARTICLES:
+		strcat_s(re3_buff, re3_buffsize, "Error: Extra particles in the .cfg that don't exist.");
+		break;
+	case ERROR_MISSING_ENTRY:
+		strcat_s(re3_buff, re3_buffsize, "Error: Missing entry for particle type.");
+		break;
+	case ERROR_TEXTURE_MISSING:
+		strcat_s(re3_buff, re3_buffsize, "Error: Missing texture inside the .txd file.");
+		break;
+	default:
+		strcat_s(re3_buff, re3_buffsize, "Error: Unknown error code.");
+		break;
+	}
+	strcat_s(re3_buff, re3_buffsize, "\n");
+
 	strcat_s(re3_buff, re3_buffsize, "\n");
 	strcat_s(re3_buff, re3_buffsize, "(Press Retry to debug the application)");
-
 
 	nCode = ::MessageBoxA(NULL, re3_buff, "GTA SA Assertion Failed!",
 		MB_ABORTRETRYIGNORE | MB_ICONHAND | MB_SETFOREGROUND | MB_TASKMODAL);
 
-	if (nCode == IDABORT)
-	{
+	if (nCode == IDABORT) {
 		raise(SIGABRT);
 		_exit(3);
 	}
 
-	if (nCode == IDRETRY)
-	{
+	if (nCode == IDRETRY) {
 		__debugbreak();
 		return;
-	}
+}
 
 	if (nCode == IDIGNORE)
 		return;
@@ -60,6 +82,7 @@ void re3_assert(const char* expr, const char* filename, unsigned int lineno, con
 #endif
 }
 #endif
+
 
 #define DEBUG_X_POS (425)
 #define DEBUG_Y_POS (-55)

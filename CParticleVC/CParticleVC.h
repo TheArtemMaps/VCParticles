@@ -148,5 +148,8 @@ extern bool ExplosionsParticles;
 extern bool WaterDrops;
 extern bool ParticleExEffects;
 extern bool Trails;
+extern bool Pulsating;
+extern bool SniperRifleGreenBlur[1024];
+extern bool SniperGreenBlur;
 
 VALIDATE_SIZE(CParticle, 0x58);

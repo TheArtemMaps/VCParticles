@@ -520,16 +520,25 @@ public:
 static ThiscallEvent <AddressList<0x6C4523, H_CALL,
     0x6C4400, H_JUMP>, PRIORITY_BEFORE, ArgPickN<CHeli*, 0>, void(CHeli*)> heliRenderEvent;
 void debugshit(const char* text, ...);
-void re3_assert(const char* expr, const char* filename, unsigned int lineno, const char* func);
+void re3_assert(const char* expr, const char* filename, unsigned int lineno, const char* func, int ErrorCode);
 void Log(const char* msg, ...);
 void ErrorWindow(const char* msg, ...);
 void ClearLogFile();
 void CloseLog();
 void
 SetMotionBlur(int r, int g, int b, int a, int type);
+enum AssertErrorCode {
+    ERROR_NULL_POINTER = 1,
+    ERROR_LINE_TOO_LONG,
+    ERROR_VALUE_NULL,
+    ERROR_EXTRA_PARTICLES,
+    ERROR_MISSING_ENTRY,
+    ERROR_TEXTURE_MISSING
+};
+//#define RW_D3D9
 void re3_trace(const char* filename, unsigned int lineno, const char* func, const char* format, ...);
 #define TRACE(f, ...) re3_trace(__FILE__, __LINE__, __FUNCTION__, f, ## __VA_ARGS__)
-#define assert(_Expression) (void)( (!!(_Expression)) || (re3_assert(#_Expression, __FILE__, __LINE__, __FUNCTION__), 0) )
+#define assert(_Expression, ErrorCode) (void)( (!!(_Expression)) || (re3_assert(#_Expression, __FILE__, __LINE__, __FUNCTION__, ErrorCode), 0) )
 #define ASSERT assert
 #define debug(f, ...) debugshit("[DBG]:" f, ## __VA_ARGS__)
 #define error(f, ...) debugshit("[ERROR]:" f, ## __VA_ARGS__)

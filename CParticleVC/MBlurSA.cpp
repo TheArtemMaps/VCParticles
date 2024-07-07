@@ -22,7 +22,7 @@
 #include "CHud.h"
 #include "Fx_c.h"
 #include "CParticleVC.h"
-#define LIBRW
+//#define LIBRW
 #define GTA_PS2
 using namespace plugin;
 ThiscallEvent    <AddressList<0x53E175, H_CALL>, PRIORITY_AFTER, ArgPickNone, void()> render2dstuff;
@@ -384,7 +384,7 @@ CMBlur::OverlayRender(RwCamera* cam, RwRaster* raster, RwRGBA color, int32_t typ
 
 	DefinedState();
 
-	/*switch (type)
+	switch (type)
 	{
 	case MOTION_BLUR_SECURITY_CAM:
 		r = 0;
@@ -438,7 +438,7 @@ CMBlur::OverlayRender(RwCamera* cam, RwRaster* raster, RwRGBA color, int32_t typ
 		RwIm2DVertexSetIntRGBA(&Vertex[2], r, g, b, a);
 		RwIm2DVertexSetIntRGBA(&Vertex2[3], r, g, b, a);
 		RwIm2DVertexSetIntRGBA(&Vertex[3], r, g, b, a);
-	}*/
+	}
 
 	RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERNEAREST);
 	RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)FALSE);
@@ -450,7 +450,7 @@ CMBlur::OverlayRender(RwCamera* cam, RwRaster* raster, RwRGBA color, int32_t typ
 	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
 	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDONE);
 
-	/*if (BlurOn) {
+	if (BlurOn) {
 		if (type == MOTION_BLUR_SNIPER) {
 			RwIm2DVertexSetIntRGBA(&Vertex2[0], r, g, b, 80);
 			RwIm2DVertexSetIntRGBA(&Vertex2[1], r, g, b, 80);
@@ -484,7 +484,7 @@ CMBlur::OverlayRender(RwCamera* cam, RwRaster* raster, RwRGBA color, int32_t typ
 			RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, Vertex, 4, Index, 6);
 			RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, Vertex2, 4, Index, 6);
 		}
-	}*/
+	}
 
 	int DrunkBlurAlpha = 175.0f * Drunkness;
 	if (DrunkBlurAlpha != 0) {
@@ -519,8 +519,8 @@ CMBlur::OverlayRender(RwCamera* cam, RwRaster* raster, RwRGBA color, int32_t typ
 		RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, Vertex, 4, Index, 6);
 	}
 
-	//if (type != MOTION_BLUR_SNIPER)
-	//	OverlayRenderFx(cam, pFrontBuffer);
+	if (type != MOTION_BLUR_SNIPER)
+		OverlayRenderFx(cam, pFrontBuffer);
 
 	RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)FALSE);
 	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)TRUE);

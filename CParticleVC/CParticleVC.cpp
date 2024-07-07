@@ -143,7 +143,7 @@ bool GunshellSounds = false;
 bool ShatteredGlassParticles = true;
 float lim = 0.2f;
 float OffsetX[1024] = { 0.2f }, OffsetY[1024] = { 0.0f }, OffsetZ[1024] = { 0.0f };
-bool InitializedWeapon[1024] = { false };
+bool InitializedWeapon[1024] = { false }, InitalizedWeaponBlur[1024] = { false };
 bool Trails = true;
 bool Pulsating = true;
 bool SniperGreenBlur = false;
@@ -1213,15 +1213,16 @@ void CParticle::ReloadConfig()
     fParticleScaleLimit = ini.ReadFloat("MISC", "Particles scale limit", 0.5f);
     SnowFlakes = ini.ReadInteger("MISC", "Max snow flakes", 1);
     lim = ini.ReadFloat("MISC", "Min distance to camera", 0.2f);
-    for (int32_t i = 0; i < 1024; ++i) {
+    for (int32_t i = 0; i < 1024; i++) {
         auto string1 = std::format("{}{}", "WEAP", i);
         
-        bool Blur = ini.ReadBoolean(string1, "Green blur for sniper rifles", false);
-        if (Blur != false) {
-            InitializedWeapon[i] = true;
+        int Blur = ini.ReadInteger(string1, "Green blur for sniper rifles", -1);
+        if (Blur != -1) {
+            InitalizedWeaponBlur[i] = true;
             SniperRifleGreenBlur[i] = Blur;
             log("Section1 (Sniper rifle blur): %s", string1);
         }
+
         float x = ini.ReadFloat(string1, "Second gunflash offset x", -1);
         if (x != -1) {
             InitializedWeapon[i] = true;
@@ -7545,6 +7546,21 @@ static void __fastcall ClearPlayerWeaponMode(CCamera* _this, int) {
 }*/
 
 int32_t TotalInjectedPatches = 0;
+
+void DoSniperRifleBlur() {
+    auto weapType = FindPlayerPed()->m_aWeapons[FindPlayerPed()->m_nActiveWeaponSlot].m_eWeaponType;
+    if (!InitalizedWeaponBlur[weapType]) {
+        return;
+    }
+
+    if (SniperRifleGreenBlur[weapType] && TheCamera.m_aCams[TheCamera.m_nActiveCam].m_nMode == MODE_SNIPER) {
+            TheCamera.SetMotionBlur(180, 255, 180, 120, MOTION_BLUR_SNIPER);
+    }
+    else {
+            TheCamera.SetMotionBlur(0, 0, 0, 0, MOTION_BLUR_NONE);
+    }
+}
+
 class CParticleVC {
 public:
     CParticleVC() {
@@ -7905,20 +7921,8 @@ public:
           //  if (m_BlurType == MOTION_BLUR_NONE || m_BlurType == MOTION_BLUR_SNIPER || m_BlurType == MOTION_BLUR_LIGHT_SCENE)
            //     SetMotionBlur(0, 0, 0, 0, MOTION_BLUR_NONE);
 
-            static bool isSniperModeActive = false;
-            auto weapType = FindPlayerPed()->m_aWeapons[FindPlayerPed()->m_nActiveWeaponSlot].m_eWeaponType;
-                if (SniperRifleGreenBlur[weapType] && TheCamera.m_PlayerWeaponMode.m_nMode == MODE_SNIPER) {
-                    if (!isSniperModeActive) {
-                    TheCamera.SetMotionBlur(180, 255, 180, 120, MOTION_BLUR_SNIPER);
-                    isSniperModeActive = true;
-                    }
-                }
-                else {
-                    if (isSniperModeActive) {
-                        TheCamera.SetMotionBlur(0, 0, 0, 0, MOTION_BLUR_NONE);
-                        isSniperModeActive = false;
-                    }
-                }
+
+            DoSniperRifleBlur();
 
             if (Trails) {
                 if (FindPlayerPed()->m_pPlayerData->m_nDrunkenness > 0) {

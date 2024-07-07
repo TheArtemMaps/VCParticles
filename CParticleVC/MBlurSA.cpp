@@ -544,7 +544,7 @@ void
 CMBlur::ClearDrunkBlur()
 {
 	Drunkness = 0.0f;
-	CTimer::ms_fTimeScale = 1.0f;
+//	CTimer::ms_fTimeScale = 1.0f;
 }
 
 #define NUM_RENDER_FX 64 // 64
